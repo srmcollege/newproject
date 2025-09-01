@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import { Eye, EyeOff, Lock, Mail, Shield, ArrowRight, CheckCircle, AlertCircle } from 'lucide-react';
 import ForgotPassword from './ForgotPassword';
 import { googleAuthService } from '../services/googleAuth';
+import GoogleSignInButton from './GoogleSignInButton';
 
 interface LoginProps {
   onLogin: (user: any) => void;
@@ -591,19 +592,14 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
               {/* Social Login */}
               <div className="grid grid-cols-2 gap-4">
-                <div 
-                  id="google-signin-button" 
-                  ref={googleButtonRef}
-                  className="flex items-center justify-center"
-                >
-                  {/* Google button will be rendered here */}
-                  {googleLoading && (
-                    <div className="flex items-center justify-center space-x-2 py-3 px-4 border border-gray-300 rounded-lg">
-                      <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                      <span className="text-sm text-gray-600">Signing in...</span>
-                    </div>
-                  )}
-                </div>
+                <GoogleSignInButton
+                  onSuccess={(user) => {
+                    setSuccess(`Welcome ${user.firstName}! Signing you in...`);
+                    setTimeout(() => onLogin(user), 1000);
+                  }}
+                  onError={(error) => setError(error)}
+                  disabled={isLoading}
+                />
                 <button className="flex items-center justify-center space-x-2 py-3 px-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
                   <div className="w-5 h-5 bg-gray-900 rounded"></div>
                   <span className="text-sm font-medium text-gray-700">Apple</span>

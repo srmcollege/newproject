@@ -311,6 +311,23 @@ const Settings: React.FC<SettingsProps> = ({ currentUser, onClose }) => {
         </button>
       </div>
 
+      {currentUser?.authMethod === 'google' && (
+        <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+              <span className="text-white font-bold text-sm">G</span>
+            </div>
+            <div>
+              <p className="font-medium text-blue-900">Google Account</p>
+              <p className="text-sm text-blue-700">Signed in with Google</p>
+            </div>
+          </div>
+          <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
+            Connected
+          </span>
+        </div>
+      )}
+
       <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
         <div className="flex items-center space-x-3">
           <FileText className="w-5 h-5 text-gray-600" />
