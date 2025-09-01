@@ -2,6 +2,7 @@ import React from 'react';
 import { useState } from 'react';
 import { Menu, Search, Bell, User, Settings, MessageCircle } from 'lucide-react';
 import SettingsModal from './Settings';
+import { googleAuthService } from '../services/googleAuth';
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -12,6 +13,19 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ sidebarOpen, setSidebarOpen, setShowChatbot, currentUser }) => {
   const [showSettings, setShowSettings] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  const handleSignOut = async () => {
+    try {
+      await googleAuthService.signOut();
+      // Clear current session
+      localStorage.removeItem('financebank_current_user');
+      // Reload page to return to login
+      window.location.reload();
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
+  };
 
   return (
     <>
@@ -65,9 +79,96 @@ const Header: React.FC<HeaderProps> = ({ sidebarOpen, setSidebarOpen, setShowCha
             <Settings className="w-5 h-5" />
           </button>
           
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-              <User className="w-4 h-4 text-white" />
+          <div className="relative">
+            <button
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="flex items-center space-x-3 p-1 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              {currentUser?.picture ? (
+                <img 
+                  src={currentUser.picture} 
+                  alt={currentUser.firstName}
+                  className="w-8 h-8 rounded-full"
+                />
+              ) : (
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                  <User className="w-4 h-4 text-white" />
+                </div>
+              )}
+              <div className="hidden sm:block text-left">
+                <p className="text-sm font-medium text-gray-900">
+                  {currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'User'}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {currentUser?.authMethod === 'google' ? 'Google Account' : 'Premium Member'}
+                </p>
+              </div>
+            </button>
+
+            {/* User Dropdown Menu */}
+            {showUserMenu && (
+              <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                <div className="px-4 py-2 border-b border-gray-100">
+                  <p className="text-sm font-medium text-gray-900">
+                    {currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'User'}
+                  </p>
+                  <p className="text-xs text-gray-500">{currentUser?.email}</p>
+                </div>
+                
+                <button
+                  onClick={() => {
+                    setShowSettings(true);
+                    setShowUserMenu(false);
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                >
+                  Account Settings
+                </button>
+                
+                <button
+                  onClick={() => {
+                    setShowUserMenu(false);
+                    // Add profile edit functionality
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                >
+                  Edit Profile
+                </button>
+                
+                <div className="border-t border-gray-100 mt-2 pt-2">
+                  <button
+                    onClick={handleSignOut}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Click outside to close user menu */}
+      {showUserMenu && (
+        <div 
+          className="fixed inset-0 z-40" 
+          onClick={() => setShowUserMenu(false)}
+        />
+      )}
+    </header>
+    
+    {showSettings && (
+      <SettingsModal 
+        currentUser={currentUser}
+        onClose={() => setShowSettings(false)} 
+      />
+    )}
+  </>
+);
+};
+
+export default Header;
             </div>
             <div className="hidden sm:block">
               <p className="text-sm font-medium text-gray-900">
