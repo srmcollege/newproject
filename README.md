@@ -41,8 +41,6 @@ A comprehensive banking application built with React, TypeScript, and Tailwind C
 - **State Management**: React Hooks
 - **Data Storage**: Browser localStorage
 - **Authentication**: Client-side with demo accounts
-- **Google Auth**: Google Identity Services
-- **OAuth Integration**: Google Sign-In API
 
 ## 📦 Installation & Setup
 
@@ -82,20 +80,6 @@ The application comes with pre-configured demo accounts:
 | `rajesh.kumar@email.com` | `demo123` | Rajesh Kumar |
 | `priya.sharma@email.com` | `demo123` | Priya Sharma |
 | `amit.patel@email.com` | `demo123` | Amit Patel |
-
-### 🔑 Google Sign-In
-
-The application supports Google Sign-In for seamless authentication:
-- **One-Click Login** with your Google account
-- **Automatic Account Creation** for new Google users
-- **Profile Picture Integration** from Google profile
-- **Secure Authentication** using Google Identity Services
-
-**Note**: In demo mode, Google Sign-In uses a test client ID. For production use, you'll need to:
-1. Create a project in [Google Cloud Console](https://console.cloud.google.com/)
-2. Enable Google Identity Services API
-3. Create OAuth 2.0 credentials
-4. Update the client ID in `src/services/googleAuth.ts`
 
 ## 🎯 Key Components
 

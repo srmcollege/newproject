@@ -1,9 +1,6 @@
 import React, { useState } from 'react';
-import { useEffect, useRef } from 'react';
 import { Eye, EyeOff, Lock, Mail, Shield, ArrowRight, CheckCircle, AlertCircle } from 'lucide-react';
 import ForgotPassword from './ForgotPassword';
-import { googleAuthService } from '../services/googleAuth';
-import GoogleSignInButton from './GoogleSignInButton';
 
 interface LoginProps {
   onLogin: (user: any) => void;
@@ -32,8 +29,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const googleButtonRef = useRef<HTMLDivElement>(null);
-  const [googleLoading, setGoogleLoading] = useState(false);
 
   // Pre-existing demo accounts for immediate sign-in
   const demoAccounts: User[] = [
@@ -80,48 +75,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   // Initialize demo accounts on component mount
   React.useEffect(() => {
     initializeDemoAccounts();
-    initializeGoogleAuth();
   }, []);
 
-  // Initialize Google Authentication
-  const initializeGoogleAuth = async () => {
-    try {
-      await googleAuthService.initialize();
-      
-      // Render Google button after initialization
-      setTimeout(() => {
-        if (googleButtonRef.current) {
-          googleAuthService.renderButton('google-signin-button');
-        }
-      }, 100);
-
-      // Listen for Google sign-in events
-      const handleGoogleSuccess = (event: any) => {
-        setGoogleLoading(false);
-        const user = event.detail;
-        setSuccess(`Welcome ${user.firstName}! Signing you in...`);
-        setTimeout(() => {
-          onLogin(user);
-        }, 1000);
-      };
-
-      const handleGoogleError = (event: any) => {
-        setGoogleLoading(false);
-        setError(event.detail || 'Google sign-in failed');
-      };
-
-      window.addEventListener('googleSignInSuccess', handleGoogleSuccess);
-      window.addEventListener('googleSignInError', handleGoogleError);
-
-      // Cleanup listeners
-      return () => {
-        window.removeEventListener('googleSignInSuccess', handleGoogleSuccess);
-        window.removeEventListener('googleSignInError', handleGoogleError);
-      };
-    } catch (error) {
-      console.error('Failed to initialize Google Auth:', error);
-    }
-  };
   const getUsers = (): User[] => {
     const users = localStorage.getItem('financebank_users');
     return users ? JSON.parse(users) : demoAccounts;
@@ -592,14 +547,10 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
               {/* Social Login */}
               <div className="grid grid-cols-2 gap-4">
-                <GoogleSignInButton
-                  onSuccess={(user) => {
-                    setSuccess(`Welcome ${user.firstName}! Signing you in...`);
-                    setTimeout(() => onLogin(user), 1000);
-                  }}
-                  onError={(error) => setError(error)}
-                  disabled={isLoading}
-                />
+                <button className="flex items-center justify-center space-x-2 py-3 px-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                  <div className="w-5 h-5 bg-blue-600 rounded"></div>
+                  <span className="text-sm font-medium text-gray-700">Google</span>
+                </button>
                 <button className="flex items-center justify-center space-x-2 py-3 px-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
                   <div className="w-5 h-5 bg-gray-900 rounded"></div>
                   <span className="text-sm font-medium text-gray-700">Apple</span>
