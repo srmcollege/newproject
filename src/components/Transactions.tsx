@@ -1,9 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, Download, ArrowUpRight, ArrowDownLeft, Calendar } from 'lucide-react';
-import { transactionService, Transaction } from '../services/transactionService';
+import { supabase } from '../lib/supabase';
 
 interface TransactionsProps {
   currentUser?: any;
+}
+
+interface Transaction {
+  id: string;
+  transaction_type: string;
+  amount: number;
+  description: string;
+  category: string;
+  transaction_date: string;
+  status: string;
 }
 
 const Transactions: React.FC<TransactionsProps> = ({ currentUser }) => {
@@ -13,12 +23,88 @@ const Transactions: React.FC<TransactionsProps> = ({ currentUser }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (currentUser?.email) {
-      const userTransactions = transactionService.getUserTransactions(currentUser.email);
-      setTransactions(userTransactions);
+    loadTransactions();
+  }, [currentUser]);
+
+  const loadTransactions = async () => {
+    try {
+      setLoading(true);
+      
+      // Get current user from Supabase auth
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        // If no authenticated user, show demo data
+        setTransactions([
+          {
+            id: '1',
+            transaction_type: 'income',
+            amount: 207500,
+            description: 'Salary Deposit',
+            category: 'Income',
+            transaction_date: '2024-01-15',
+            status: 'completed'
+          },
+          {
+            id: '2',
+            transaction_type: 'expense',
+            amount: -3765,
+            description: 'Swiggy Order',
+            category: 'Food',
+            transaction_date: '2024-01-14',
+            status: 'completed'
+          },
+          {
+            id: '3',
+            transaction_type: 'expense',
+            amount: -9960,
+            description: 'Electric Bill',
+            category: 'Utilities',
+            transaction_date: '2024-01-13',
+            status: 'completed'
+          },
+          {
+            id: '4',
+            transaction_type: 'income',
+            amount: 99600,
+            description: 'Freelance Payment',
+            category: 'Income',
+            transaction_date: '2024-01-12',
+            status: 'completed'
+          },
+          {
+            id: '5',
+            transaction_type: 'expense',
+            amount: -7465,
+            description: 'Amazon Purchase',
+            category: 'Shopping',
+            transaction_date: '2024-01-11',
+            status: 'completed'
+          }
+        ]);
+        setLoading(false);
+        return;
+      }
+
+      // Load transactions from database
+      const { data: transactionsData, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading transactions:', error);
+      } else {
+        setTransactions(transactionsData || []);
+      }
+      
+    } catch (err) {
+      console.error('Error loading transactions:', err);
+    } finally {
       setLoading(false);
     }
-  }, [currentUser]);
+  };
 
   const categories = ['all', 'Income', 'Food', 'Utilities', 'Shopping', 'Transportation', 'Investment', 'Health'];
 
@@ -124,9 +210,9 @@ const Transactions: React.FC<TransactionsProps> = ({ currentUser }) => {
                   <td className="px-6 py-4">
                     <div className="flex items-center space-x-3">
                       <div className={`p-2 rounded-full ${
-                        transaction.type === 'income' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+                        transaction.transaction_type === 'income' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
                       }`}>
-                        {transaction.type === 'income' ? 
+                        {transaction.transaction_type === 'income' ? 
                           <ArrowDownLeft className="w-4 h-4" /> : 
                           <ArrowUpRight className="w-4 h-4" />
                         }
@@ -150,13 +236,13 @@ const Transactions: React.FC<TransactionsProps> = ({ currentUser }) => {
                       {transaction.category}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">{transaction.account}</td>
-                  <td className="px-6 py-4 text-sm text-gray-900">{transaction.date}</td>
+                  <td className="px-6 py-4 text-sm text-gray-900">Primary Account</td>
+                  <td className="px-6 py-4 text-sm text-gray-900">{new Date(transaction.transaction_date).toLocaleDateString()}</td>
                   <td className="px-6 py-4 text-right">
                     <span className={`font-semibold ${
-                      transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
+                      transaction.transaction_type === 'income' ? 'text-green-600' : 'text-red-600'
                     }`}>
-                      {transaction.type === 'income' ? '+' : ''}{formatCurrency(Math.abs(transaction.amount))}
+                      {transaction.transaction_type === 'income' ? '+' : ''}{formatCurrency(Math.abs(transaction.amount))}
                     </span>
                   </td>
                 </tr>

@@ -1,10 +1,17 @@
 import React, { useState } from 'react';
-import { useEffect } from 'react';
 import { ArrowRight, Check, Clock, User, CreditCard } from 'lucide-react';
-import { transactionService, Account } from '../services/transactionService';
+import { supabase } from '../lib/supabase';
 
 interface TransferProps {
   currentUser?: any;
+}
+
+interface Account {
+  id: string;
+  account_name: string;
+  account_type: string;
+  balance: number;
+  currency: string;
 }
 
 const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
@@ -19,18 +26,66 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (currentUser?.email) {
-      const userAccounts = transactionService.getUserAccounts(currentUser.email);
-      setAccounts(userAccounts);
-      if (userAccounts.length > 0) {
-        setFromAccount(userAccounts[0].name);
-        if (userAccounts.length > 1) {
-          setToAccount(userAccounts[1].name);
+  React.useEffect(() => {
+    loadAccounts();
+  }, [currentUser]);
+
+  const loadAccounts = async () => {
+    try {
+      // Get current user from Supabase auth
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        // Demo accounts for non-authenticated users
+        const demoAccounts = [
+          {
+            id: '1',
+            account_name: 'Checking Account',
+            account_type: 'checking',
+            balance: 1032450.32,
+            currency: 'INR'
+          },
+          {
+            id: '2',
+            account_name: 'Savings Account',
+            account_type: 'savings',
+            balance: 3752089.45,
+            currency: 'INR'
+          }
+        ];
+        setAccounts(demoAccounts);
+        if (demoAccounts.length > 0) {
+          setFromAccount(demoAccounts[0].account_name);
+          if (demoAccounts.length > 1) {
+            setToAccount(demoAccounts[1].account_name);
+          }
+        }
+        return;
+      }
+
+      // Load accounts from database
+      const { data: accountsData, error } = await supabase
+        .from('accounts')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('Error loading accounts:', error);
+      } else {
+        setAccounts(accountsData || []);
+        if (accountsData && accountsData.length > 0) {
+          setFromAccount(accountsData[0].account_name);
+          if (accountsData.length > 1) {
+            setToAccount(accountsData[1].account_name);
+          }
         }
       }
+      
+    } catch (err) {
+      console.error('Error loading accounts:', err);
     }
-  }, [currentUser]);
+  };
 
   const recentRecipients = [
     { name: 'Priya Sharma', email: 'priya.sharma@email.com', avatar: 'PS' },
@@ -53,14 +108,9 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
     }).format(amount);
   };
 
-  const handleTransfer = (e: React.FormEvent) => {
+  const handleTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!currentUser?.email) {
-      setError('User not authenticated');
-      return;
-    }
-
     setLoading(true);
     setError('');
     setSuccess('');
@@ -77,19 +127,49 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
           throw new Error('Cannot transfer to the same account');
         }
 
-        const fromAccountData = accounts.find(acc => acc.name === fromAccount);
+        const fromAccountData = accounts.find(acc => acc.account_name === fromAccount);
         if (!fromAccountData || fromAccountData.balance < transferAmount) {
           throw new Error('Insufficient balance in source account');
         }
 
-        // Create transfer transaction
-        transactionService.createTransfer(
-          currentUser.email,
-          transferAmount,
-          fromAccount,
-          toAccount,
-          memo || `Transfer from ${fromAccount} to ${toAccount}`
-        );
+        // Get current user
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          const toAccountData = accounts.find(acc => acc.account_name === toAccount);
+          
+          // Create transfer transaction
+          const { error: transactionError } = await supabase
+            .from('transactions')
+            .insert({
+              user_id: user.id,
+              account_id: fromAccountData.id,
+              to_account_id: toAccountData?.id,
+              transaction_type: 'transfer',
+              amount: -transferAmount,
+              description: memo || `Transfer from ${fromAccount} to ${toAccount}`,
+              category: 'Transfer',
+              reference_number: `TXN_${Date.now()}`,
+              status: 'completed'
+            });
+
+          if (transactionError) {
+            throw new Error('Failed to create transaction');
+          }
+
+          // Update account balances
+          await supabase
+            .from('accounts')
+            .update({ balance: fromAccountData.balance - transferAmount })
+            .eq('id', fromAccountData.id);
+
+          if (toAccountData) {
+            await supabase
+              .from('accounts')
+              .update({ balance: toAccountData.balance + transferAmount })
+              .eq('id', toAccountData.id);
+          }
+        }
 
         setSuccess(`Successfully transferred ${formatCurrency(transferAmount)} from ${fromAccount} to ${toAccount}`);
         
@@ -97,9 +177,8 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
         setAmount('');
         setMemo('');
         
-        // Refresh accounts
-        const updatedAccounts = transactionService.getUserAccounts(currentUser.email);
-        setAccounts(updatedAccounts);
+        // Reload accounts
+        await loadAccounts();
 
       } else {
         // External transfer
@@ -107,19 +186,39 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
           throw new Error('Please enter recipient details');
         }
 
-        const fromAccountData = accounts.find(acc => acc.name === fromAccount);
+        const fromAccountData = accounts.find(acc => acc.account_name === fromAccount);
         if (!fromAccountData || fromAccountData.balance < transferAmount) {
           throw new Error('Insufficient balance in source account');
         }
 
-        // Create expense transaction for external transfer
-        transactionService.createExpense(
-          currentUser.email,
-          transferAmount,
-          `Transfer to ${recipient}${memo ? ` - ${memo}` : ''}`,
-          'Transfer',
-          fromAccount
-        );
+        // Get current user
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          // Create expense transaction for external transfer
+          const { error: transactionError } = await supabase
+            .from('transactions')
+            .insert({
+              user_id: user.id,
+              account_id: fromAccountData.id,
+              transaction_type: 'expense',
+              amount: -transferAmount,
+              description: `Transfer to ${recipient}${memo ? ` - ${memo}` : ''}`,
+              category: 'Transfer',
+              reference_number: `EXT_${Date.now()}`,
+              status: 'completed'
+            });
+
+          if (transactionError) {
+            throw new Error('Failed to create transaction');
+          }
+
+          // Update account balance
+          await supabase
+            .from('accounts')
+            .update({ balance: fromAccountData.balance - transferAmount })
+            .eq('id', fromAccountData.id);
+        }
 
         setSuccess(`Successfully sent ${formatCurrency(transferAmount)} to ${recipient}`);
         
@@ -128,9 +227,8 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
         setRecipient('');
         setMemo('');
         
-        // Refresh accounts
-        const updatedAccounts = transactionService.getUserAccounts(currentUser.email);
-        setAccounts(updatedAccounts);
+        // Reload accounts
+        await loadAccounts();
       }
 
     } catch (err) {
@@ -197,8 +295,8 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
                 className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 {accounts.map(account => (
-                  <option key={account.id} value={account.name}>
-                    {account.name} - {formatCurrency(account.balance)}
+                  <option key={account.id} value={account.account_name}>
+                    {account.account_name} - {formatCurrency(account.balance)}
                   </option>
                 ))}
               </select>
@@ -214,9 +312,9 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
                     onChange={(e) => setToAccount(e.target.value)}
                     className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
-                    {accounts.filter(account => account.name !== fromAccount).map(account => (
-                      <option key={account.id} value={account.name}>
-                        {account.name} - {formatCurrency(account.balance)}
+                    {accounts.filter(account => account.account_name !== fromAccount).map(account => (
+                      <option key={account.id} value={account.account_name}>
+                        {account.account_name} - {formatCurrency(account.balance)}
                       </option>
                     ))}
                   </select>
