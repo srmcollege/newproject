@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { supabase, authHelpers } from './lib/supabase';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -22,6 +23,7 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showChatbot, setShowChatbot] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   // Listen for navigation events from dashboard quick actions
   useEffect(() => {
@@ -33,9 +35,45 @@ function App() {
     window.addEventListener('navigate', handleNavigate);
     return () => window.removeEventListener('navigate', handleNavigate);
   }, []);
+
+  // Check for existing authentication on app load
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
+
+  const checkAuthStatus = async () => {
+    try {
+      if (supabase) {
+        // Check Supabase auth
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const profile = await authHelpers.getCurrentUser();
+          if (profile) {
+            setCurrentUser(profile);
+            setIsAuthenticated(true);
+          }
+        }
+      } else {
+        // Check localStorage for demo mode
+        const savedUser = localStorage.getItem('financebank_current_user');
+        if (savedUser) {
+          const user = JSON.parse(savedUser);
+          setCurrentUser(user);
+          setIsAuthenticated(true);
+        }
+      }
+    } catch (error) {
+      console.error('Auth check failed:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogin = (user: any) => {
     setIsAuthenticated(true);
     setCurrentUser(user);
+    // Save to localStorage for demo mode persistence
+    localStorage.setItem('financebank_current_user', JSON.stringify(user));
   };
 
   const renderContent = () => {
@@ -68,6 +106,15 @@ function App() {
         return <Dashboard />;
     }
   };
+
+  // Show loading screen while checking auth
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Login onLogin={handleLogin} />;

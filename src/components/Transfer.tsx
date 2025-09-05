@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowRight, Check, Clock, User, CreditCard } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase, dbHelpers } from '../lib/supabase';
 
 interface TransferProps {
   currentUser?: any;
@@ -32,10 +32,7 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
 
   const loadAccounts = async () => {
     try {
-      // Get current user from Supabase auth
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
+      if (!supabase || !currentUser?.id) {
         // Demo accounts for non-authenticated users
         const demoAccounts = [
           {
@@ -64,21 +61,12 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
       }
 
       // Load accounts from database
-      const { data: accountsData, error } = await supabase
-        .from('accounts')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: true });
-
-      if (error) {
-        console.error('Error loading accounts:', error);
-      } else {
-        setAccounts(accountsData || []);
-        if (accountsData && accountsData.length > 0) {
-          setFromAccount(accountsData[0].account_name);
-          if (accountsData.length > 1) {
-            setToAccount(accountsData[1].account_name);
-          }
+      const accountsData = await dbHelpers.getUserAccounts(currentUser.id);
+      setAccounts(accountsData);
+      if (accountsData.length > 0) {
+        setFromAccount(accountsData[0].account_name);
+        if (accountsData.length > 1) {
+          setToAccount(accountsData[1].account_name);
         }
       }
       
@@ -132,42 +120,26 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
           throw new Error('Insufficient balance in source account');
         }
 
-        // Get current user
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (user) {
+        if (supabase && currentUser?.id) {
           const toAccountData = accounts.find(acc => acc.account_name === toAccount);
           
           // Create transfer transaction
-          const { error: transactionError } = await supabase
-            .from('transactions')
-            .insert({
-              user_id: user.id,
+          await dbHelpers.createTransaction({
+              user_id: currentUser.id,
               account_id: fromAccountData.id,
               to_account_id: toAccountData?.id,
               transaction_type: 'transfer',
               amount: -transferAmount,
               description: memo || `Transfer from ${fromAccount} to ${toAccount}`,
               category: 'Transfer',
-              reference_number: `TXN_${Date.now()}`,
               status: 'completed'
             });
 
-          if (transactionError) {
-            throw new Error('Failed to create transaction');
-          }
-
           // Update account balances
-          await supabase
-            .from('accounts')
-            .update({ balance: fromAccountData.balance - transferAmount })
-            .eq('id', fromAccountData.id);
+          await dbHelpers.updateAccountBalance(fromAccountData.id, fromAccountData.balance - transferAmount);
 
           if (toAccountData) {
-            await supabase
-              .from('accounts')
-              .update({ balance: toAccountData.balance + transferAmount })
-              .eq('id', toAccountData.id);
+            await dbHelpers.updateAccountBalance(toAccountData.id, toAccountData.balance + transferAmount);
           }
         }
 
@@ -191,33 +163,20 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
           throw new Error('Insufficient balance in source account');
         }
 
-        // Get current user
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (user) {
+        if (supabase && currentUser?.id) {
           // Create expense transaction for external transfer
-          const { error: transactionError } = await supabase
-            .from('transactions')
-            .insert({
-              user_id: user.id,
+          await dbHelpers.createTransaction({
+              user_id: currentUser.id,
               account_id: fromAccountData.id,
               transaction_type: 'expense',
               amount: -transferAmount,
               description: `Transfer to ${recipient}${memo ? ` - ${memo}` : ''}`,
               category: 'Transfer',
-              reference_number: `EXT_${Date.now()}`,
               status: 'completed'
             });
 
-          if (transactionError) {
-            throw new Error('Failed to create transaction');
-          }
-
           // Update account balance
-          await supabase
-            .from('accounts')
-            .update({ balance: fromAccountData.balance - transferAmount })
-            .eq('id', fromAccountData.id);
+          await dbHelpers.updateAccountBalance(fromAccountData.id, fromAccountData.balance - transferAmount);
         }
 
         setSuccess(`Successfully sent ${formatCurrency(transferAmount)} to ${recipient}`);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, Download, ArrowUpRight, ArrowDownLeft, Calendar } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase, dbHelpers } from '../lib/supabase';
 
 interface TransactionsProps {
   currentUser?: any;
@@ -14,6 +14,7 @@ interface Transaction {
   category: string;
   transaction_date: string;
   status: string;
+  accounts?: { account_name: string };
 }
 
 const Transactions: React.FC<TransactionsProps> = ({ currentUser }) => {
@@ -30,10 +31,7 @@ const Transactions: React.FC<TransactionsProps> = ({ currentUser }) => {
     try {
       setLoading(true);
       
-      // Get current user from Supabase auth
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
+      if (!supabase || !currentUser?.id) {
         // If no authenticated user, show demo data
         setTransactions([
           {
@@ -44,6 +42,7 @@ const Transactions: React.FC<TransactionsProps> = ({ currentUser }) => {
             category: 'Income',
             transaction_date: '2024-01-15',
             status: 'completed'
+            accounts: { account_name: 'Checking Account' }
           },
           {
             id: '2',
@@ -53,6 +52,7 @@ const Transactions: React.FC<TransactionsProps> = ({ currentUser }) => {
             category: 'Food',
             transaction_date: '2024-01-14',
             status: 'completed'
+            accounts: { account_name: 'Checking Account' }
           },
           {
             id: '3',
@@ -62,6 +62,7 @@ const Transactions: React.FC<TransactionsProps> = ({ currentUser }) => {
             category: 'Utilities',
             transaction_date: '2024-01-13',
             status: 'completed'
+            accounts: { account_name: 'Checking Account' }
           },
           {
             id: '4',
@@ -71,6 +72,7 @@ const Transactions: React.FC<TransactionsProps> = ({ currentUser }) => {
             category: 'Income',
             transaction_date: '2024-01-12',
             status: 'completed'
+            accounts: { account_name: 'Savings Account' }
           },
           {
             id: '5',
@@ -80,6 +82,7 @@ const Transactions: React.FC<TransactionsProps> = ({ currentUser }) => {
             category: 'Shopping',
             transaction_date: '2024-01-11',
             status: 'completed'
+            accounts: { account_name: 'Checking Account' }
           }
         ]);
         setLoading(false);
@@ -87,17 +90,8 @@ const Transactions: React.FC<TransactionsProps> = ({ currentUser }) => {
       }
 
       // Load transactions from database
-      const { data: transactionsData, error } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error loading transactions:', error);
-      } else {
-        setTransactions(transactionsData || []);
-      }
+      const transactionsData = await dbHelpers.getUserTransactions(currentUser.id, 100);
+      setTransactions(transactionsData);
       
     } catch (err) {
       console.error('Error loading transactions:', err);
@@ -236,7 +230,7 @@ const Transactions: React.FC<TransactionsProps> = ({ currentUser }) => {
                       {transaction.category}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">Primary Account</td>
+                  <td className="px-6 py-4 text-sm text-gray-900">{transaction.accounts?.account_name || 'Account'}</td>
                   <td className="px-6 py-4 text-sm text-gray-900">{new Date(transaction.transaction_date).toLocaleDateString()}</td>
                   <td className="px-6 py-4 text-right">
                     <span className={`font-semibold ${

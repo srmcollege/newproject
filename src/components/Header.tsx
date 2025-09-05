@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Menu, Bell, Settings as SettingsIcon, User, LogOut } from 'lucide-react';
+import { supabase, authHelpers } from '../lib/supabase';
 import Settings from './Settings';
 
 interface HeaderProps {
@@ -18,17 +19,27 @@ const Header: React.FC<HeaderProps> = ({
   const [showSettings, setShowSettings] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
     // Clear user session
     localStorage.removeItem('financebank_current_user');
+    
+    // Sign out from Supabase if connected
+    if (supabase) {
+      try {
+        await authHelpers.signOut();
+      } catch (error) {
+        console.error('Supabase sign out error:', error);
+      }
+    }
+    
     // Reload the page to reset the app state
     window.location.reload();
   };
 
   const getUserInitials = () => {
     if (!currentUser) return 'U';
-    const firstName = currentUser.firstName || '';
-    const lastName = currentUser.lastName || '';
+    const firstName = currentUser.first_name || currentUser.firstName || '';
+    const lastName = currentUser.last_name || currentUser.lastName || '';
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
 
@@ -81,7 +92,7 @@ const Header: React.FC<HeaderProps> = ({
                   {getUserInitials()}
                 </div>
                 <span className="hidden sm:block text-sm font-medium text-gray-700">
-                  {currentUser?.firstName || 'User'}
+                  {currentUser?.first_name || currentUser?.firstName || 'User'}
                 </span>
               </button>
 
@@ -89,7 +100,7 @@ const Header: React.FC<HeaderProps> = ({
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
                   <div className="px-4 py-2 border-b border-gray-200">
                     <p className="text-sm font-medium text-gray-900">
-                      {currentUser?.firstName} {currentUser?.lastName}
+                      {currentUser?.first_name || currentUser?.firstName} {currentUser?.last_name || currentUser?.lastName}
                     </p>
                     <p className="text-xs text-gray-500">{currentUser?.email}</p>
                   </div>

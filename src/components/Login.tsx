@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, Lock, Mail, Shield, ArrowRight, CheckCircle, AlertCircle } from 'lucide-react';
 import ForgotPassword from './ForgotPassword';
+import { supabase, authHelpers } from '../lib/supabase';
 
 interface LoginProps {
   onLogin: (user: any) => void;
@@ -55,7 +56,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     }
   ];
 
-  // Initialize demo accounts in localStorage if not present
+  // Initialize demo accounts in localStorage if not present (fallback for demo mode)
   const initializeDemoAccounts = () => {
     const existingUsers = localStorage.getItem('financebank_users');
     if (!existingUsers) {
@@ -77,6 +78,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     initializeDemoAccounts();
   }, []);
 
+  // Fallback functions for demo mode
   const getUsers = (): User[] => {
     const users = localStorage.getItem('financebank_users');
     return users ? JSON.parse(users) : demoAccounts;
@@ -104,9 +106,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setError('');
     setSuccess('');
 
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
     try {
       if (isLogin) {
         // Sign In Logic
@@ -114,15 +113,41 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           throw new Error('Please fill in all required fields');
         }
 
-        const user = findUser(formData.email, formData.password);
-        if (!user) {
-          throw new Error('Invalid email or password. Try one of the demo accounts below.');
+        if (supabase) {
+          // Use Supabase authentication
+          try {
+            const { user } = await authHelpers.signIn(formData.email, formData.password);
+            if (user) {
+              const profile = await authHelpers.getCurrentUser();
+              if (profile) {
+                setSuccess(`Welcome back, ${profile.first_name}! Redirecting to dashboard...`);
+                setTimeout(() => {
+                  onLogin(profile);
+                }, 1000);
+              }
+            }
+          } catch (supabaseError: any) {
+            // If Supabase auth fails, try demo accounts
+            const user = findUser(formData.email, formData.password);
+            if (!user) {
+              throw new Error('Invalid email or password. Try one of the demo accounts below.');
+            }
+            setSuccess(`Welcome back, ${user.firstName}! Using demo mode...`);
+            setTimeout(() => {
+              onLogin(user);
+            }, 1000);
+          }
+        } else {
+          // Demo mode only
+          const user = findUser(formData.email, formData.password);
+          if (!user) {
+            throw new Error('Invalid email or password. Try one of the demo accounts below.');
+          }
+          setSuccess(`Welcome back, ${user.firstName}! Using demo mode...`);
+          setTimeout(() => {
+            onLogin(user);
+          }, 1000);
         }
-
-        setSuccess(`Welcome back, ${user.firstName}! Redirecting to dashboard...`);
-        setTimeout(() => {
-          onLogin(user);
-        }, 1000);
 
       } else {
         // Sign Up Logic
@@ -139,35 +164,68 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           throw new Error('Password must be at least 6 characters long');
         }
 
-        if (userExists(formData.email)) {
-          throw new Error('An account with this email already exists. Please sign in instead.');
+        if (supabase) {
+          // Use Supabase authentication
+          try {
+            await authHelpers.signUp(formData.email, formData.password, {
+              firstName: formData.firstName,
+              lastName: formData.lastName,
+              phone: formData.phone
+            });
+            
+            setSuccess('Account created successfully! Please check your email to verify your account, then sign in.');
+            
+            // Switch to login mode and clear form
+            setTimeout(() => {
+              setIsLogin(true);
+              setFormData({
+                email: formData.email, // Keep email for convenience
+                password: '',
+                confirmPassword: '',
+                firstName: '',
+                lastName: '',
+                phone: ''
+              });
+              setSuccess('');
+            }, 3000);
+          } catch (supabaseError: any) {
+            if (supabaseError.message.includes('already registered')) {
+              throw new Error('An account with this email already exists. Please sign in instead.');
+            }
+            throw supabaseError;
+          }
+        } else {
+          // Demo mode fallback
+          if (userExists(formData.email)) {
+            throw new Error('An account with this email already exists. Please sign in instead.');
+          }
+
+          // Create new user in demo mode
+          const newUser: User = {
+            email: formData.email,
+            password: formData.password,
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            phone: formData.phone
+          };
+
+          saveUser(newUser);
+          setSuccess('Account created successfully! You can now sign in.');
+          
+          // Switch to login mode and clear form
+          setTimeout(() => {
+            setIsLogin(true);
+            setFormData({
+              email: formData.email, // Keep email for convenience
+              password: '',
+              confirmPassword: '',
+              firstName: '',
+              lastName: '',
+              phone: ''
+            });
+            setSuccess('');
+          }, 2000);
         }
-
-        // Create new user
-        const newUser: User = {
-          email: formData.email,
-          password: formData.password,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          phone: formData.phone
-        };
-
-        saveUser(newUser);
-        setSuccess('Account created successfully! You can now sign in.');
-        
-        // Switch to login mode and clear form
-        setTimeout(() => {
-          setIsLogin(true);
-          setFormData({
-            email: formData.email, // Keep email for convenience
-            password: '',
-            confirmPassword: '',
-            firstName: '',
-            lastName: '',
-            phone: ''
-          });
-          setSuccess('');
-        }, 2000);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
