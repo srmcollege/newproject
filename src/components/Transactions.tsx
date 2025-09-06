@@ -41,7 +41,7 @@ const Transactions: React.FC<TransactionsProps> = ({ currentUser }) => {
             description: 'Salary Deposit',
             category: 'Income',
             transaction_date: '2024-01-15',
-            status: 'completed'
+            status: 'completed',
             accounts: { account_name: 'Checking Account' }
           },
           {
@@ -51,7 +51,7 @@ const Transactions: React.FC<TransactionsProps> = ({ currentUser }) => {
             description: 'Swiggy Order',
             category: 'Food',
             transaction_date: '2024-01-14',
-            status: 'completed'
+            status: 'completed',
             accounts: { account_name: 'Checking Account' }
           },
           {
@@ -61,7 +61,7 @@ const Transactions: React.FC<TransactionsProps> = ({ currentUser }) => {
             description: 'Electric Bill',
             category: 'Utilities',
             transaction_date: '2024-01-13',
-            status: 'completed'
+            status: 'completed',
             accounts: { account_name: 'Checking Account' }
           },
           {
@@ -71,7 +71,7 @@ const Transactions: React.FC<TransactionsProps> = ({ currentUser }) => {
             description: 'Freelance Payment',
             category: 'Income',
             transaction_date: '2024-01-12',
-            status: 'completed'
+            status: 'completed',
             accounts: { account_name: 'Savings Account' }
           },
           {
@@ -81,7 +81,7 @@ const Transactions: React.FC<TransactionsProps> = ({ currentUser }) => {
             description: 'Amazon Purchase',
             category: 'Shopping',
             transaction_date: '2024-01-11',
-            status: 'completed'
+            status: 'completed',
             accounts: { account_name: 'Checking Account' }
           }
         ]);

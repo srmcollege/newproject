@@ -314,11 +314,14 @@ export const dbHelpers = {
   async createTransaction(transaction: Database['public']['Tables']['transactions']['Insert']) {
     if (!supabase) throw new Error('Supabase not configured');
     
+    // Generate unique reference number
+    const referenceNumber = `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
     const { data, error } = await supabase
       .from('transactions')
       .insert({
         ...transaction,
-        reference_number: `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        reference_number: referenceNumber
       })
       .select()
       .single();

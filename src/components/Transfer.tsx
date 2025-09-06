@@ -166,14 +166,15 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
         if (supabase && currentUser?.id) {
           // Create expense transaction for external transfer
           await dbHelpers.createTransaction({
-              user_id: currentUser.id,
-              account_id: fromAccountData.id,
-              transaction_type: 'expense',
-              amount: -transferAmount,
-              description: `Transfer to ${recipient}${memo ? ` - ${memo}` : ''}`,
-              category: 'Transfer',
-              status: 'completed'
-            });
+            user_id: currentUser.id,
+            account_id: fromAccountData.id,
+            transaction_type: 'expense',
+            amount: -transferAmount,
+            description: `Transfer to ${recipient}${memo ? ` - ${memo}` : ''}`,
+            category: 'Transfer',
+            status: 'completed',
+            transaction_date: new Date().toISOString().split('T')[0]
+          });
 
           // Update account balance
           await dbHelpers.updateAccountBalance(fromAccountData.id, fromAccountData.balance - transferAmount);

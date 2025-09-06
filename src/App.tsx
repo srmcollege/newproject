@@ -87,7 +87,7 @@ function App() {
       case 'cards':
         return <Cards />;
       case 'analytics':
-        return <Analytics />;
+        return <Analytics currentUser={currentUser} />;
       case 'calendar':
         return <Calendar />;
       case 'bills':

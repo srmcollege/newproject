@@ -1,8 +1,50 @@
 import React, { useState } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, Target, Calendar, Download } from 'lucide-react';
+import { supabase, dbHelpers } from '../lib/supabase';
 
-const Analytics: React.FC = () => {
+interface AnalyticsProps {
+  currentUser?: any;
+}
+
+const Analytics: React.FC<AnalyticsProps> = ({ currentUser }) => {
   const [timeframe, setTimeframe] = useState('month');
+  const [loading, setLoading] = useState(false);
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
+
+  React.useEffect(() => {
+    loadAnalyticsData();
+  }, [currentUser, timeframe]);
+
+  const loadAnalyticsData = async () => {
+    if (!currentUser?.id || !supabase) return;
+    
+    setLoading(true);
+    try {
+      const transactions = await dbHelpers.getUserTransactions(currentUser.id, 100);
+      const accounts = await dbHelpers.getUserAccounts(currentUser.id);
+      
+      // Process analytics data
+      const totalIncome = transactions
+        .filter(t => t.transaction_type === 'income')
+        .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+      
+      const totalExpenses = transactions
+        .filter(t => t.transaction_type === 'expense')
+        .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+      
+      setAnalyticsData({
+        totalIncome,
+        totalExpenses,
+        netSavings: totalIncome - totalExpenses,
+        accounts,
+        transactions
+      });
+    } catch (error) {
+      console.error('Error loading analytics:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const stats = [
     {

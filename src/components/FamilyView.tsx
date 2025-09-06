@@ -10,10 +10,10 @@ const FamilyView: React.FC<FamilyViewProps> = ({ currentUser }) => {
   const [showBalances, setShowBalances] = useState(true);
 
   // Get user's name or fallback to default
-  const userName = currentUser ? `${currentUser.first_name || currentUser.firstName} ${currentUser.last_name || currentUser.lastName}` : 'Rajesh Kumar';
+  const userName = currentUser ? `${currentUser.first_name || currentUser.firstName || 'Rajesh'} ${currentUser.last_name || currentUser.lastName || 'Kumar'}` : 'Rajesh Kumar';
   const userFirstName = currentUser?.first_name || currentUser?.firstName || 'Rajesh';
   const userLastName = currentUser?.last_name || currentUser?.lastName || 'Kumar';
-  const userInitials = currentUser ? `${(currentUser.first_name || currentUser.firstName)[0]}${(currentUser.last_name || currentUser.lastName)[0]}` : 'RK';
+  const userInitials = currentUser ? `${(currentUser.first_name || currentUser.firstName || 'R')[0]}${(currentUser.last_name || currentUser.lastName || 'K')[0]}` : 'RK';
 
   const familyMembers = [
     {

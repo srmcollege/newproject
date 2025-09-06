@@ -182,7 +182,8 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser }) => {
           amount: quickActionType === 'income' ? amount : -amount,
           description: quickActionData.description,
           category: quickActionData.category,
-          status: 'completed' as const
+          status: 'completed' as const,
+          transaction_date: new Date().toISOString().split('T')[0]
         };
 
         const newTransaction = await dbHelpers.createTransaction(transactionData);

@@ -381,6 +381,21 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 </button>
               </div>
 
+              {/* Error/Success Messages */}
+              {error && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2">
+                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+                  <span className="text-red-700 text-sm">{error}</span>
+                </div>
+              )}
+
+              {success && (
+                <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center space-x-2">
+                  <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+                  <span className="text-green-700 text-sm">{success}</span>
+                </div>
+              )}
+
               {/* Demo Accounts (Sign In Only) */}
               {isLogin && (
                 <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -398,21 +413,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                       </button>
                     ))}
                   </div>
-                </div>
-              )}
-
-              {/* Error/Success Messages */}
-              {error && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2">
-                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
-                  <span className="text-red-700 text-sm">{error}</span>
-                </div>
-              )}
-
-              {success && (
-                <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center space-x-2">
-                  <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-                  <span className="text-green-700 text-sm">{success}</span>
                 </div>
               )}
 
