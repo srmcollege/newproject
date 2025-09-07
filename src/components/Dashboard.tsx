@@ -10,7 +10,8 @@ import {
   TrendingDown,
   DollarSign,
   Eye,
-  EyeOff
+  EyeOff,
+  Activity
 } from 'lucide-react';
 import { supabase, dbHelpers } from '../lib/supabase';
 
@@ -47,7 +48,8 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser }) => {
   const [quickActionData, setQuickActionData] = useState({
     amount: '',
     description: '',
-    category: ''
+    category: '',
+    categoryId: ''
   });
 
   useEffect(() => {
@@ -62,7 +64,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser }) => {
         // Load from Supabase
         const [accountsData, transactionsData] = await Promise.all([
           dbHelpers.getUserAccounts(currentUser.id),
-          dbHelpers.getUserTransactions(currentUser.id, 10)
+          dbHelpers.getUserTransactions(currentUser.id, 10),
         ]);
         
         setAccounts(accountsData);
@@ -159,7 +161,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser }) => {
   const handleQuickAction = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!quickActionData.amount || !quickActionData.description || !quickActionData.category) {
+    if (!quickActionData.amount || !quickActionData.description || !quickActionData.categoryId) {
       alert('Please fill in all fields');
       return;
     }
@@ -178,10 +180,10 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser }) => {
         const transactionData = {
           user_id: currentUser.id,
           account_id: primaryAccount.id,
+          category_id: quickActionData.categoryId,
           transaction_type: quickActionType,
           amount: quickActionType === 'income' ? amount : -amount,
           description: quickActionData.description,
-          category: quickActionData.category,
           status: 'completed' as const,
           transaction_date: new Date().toISOString().split('T')[0]
         };
@@ -205,12 +207,12 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser }) => {
       }
 
       // Reset form
-      setQuickActionData({ amount: '', description: '', category: '' });
+      setQuickActionData({ amount: '', description: '', category: '', categoryId: '' });
       setShowQuickAction(false);
       
     } catch (error) {
       console.error('Error creating transaction:', error);
-      alert('Failed to add transaction. Please try again.');
+      alert(`Failed to add transaction: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -243,6 +245,16 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser }) => {
       }
     },
     {
+      title: 'View Activity',
+      icon: Activity,
+      color: 'text-indigo-600',
+      bgColor: 'bg-indigo-100',
+      action: () => {
+        const event = new CustomEvent('navigate', { detail: 'transactions' });
+        window.dispatchEvent(event);
+      }
+    },
+    {
       title: 'Request Money',
       icon: ArrowDownLeft,
       color: 'text-green-600',
@@ -264,7 +276,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser }) => {
       icon: Plus,
       color: 'text-orange-600',
       bgColor: 'bg-orange-100',
-      action: () => setShowQuickAction(true)
+      action: () => loadCategoriesAndShowModal()
     }
   ];
 
@@ -275,6 +287,21 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser }) => {
       </div>
     );
   }
+
+  const [categories, setCategories] = useState<any[]>([]);
+
+  const loadCategoriesAndShowModal = async () => {
+    try {
+      if (supabase) {
+        const categoriesData = await dbHelpers.getTransactionCategories();
+        setCategories(categoriesData);
+      }
+      setShowQuickAction(true);
+    } catch (error) {
+      console.error('Error loading categories:', error);
+      setShowQuickAction(true);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -440,7 +467,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser }) => {
                   <div>
                     <p className="font-medium text-gray-900">{transaction.description}</p>
                     <p className="text-sm text-gray-500">
-                      {transaction.accounts?.account_name || 'Account'} • {new Date(transaction.transaction_date).toLocaleDateString()}
+                      {transaction.accounts?.account_name || 'Account'} • {new Date(transaction.transaction_date).toLocaleDateString('en-IN')}
                     </p>
                   </div>
                 </div>
@@ -526,30 +553,27 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser }) => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
                 <select
-                  value={quickActionData.category}
-                  onChange={(e) => setQuickActionData(prev => ({ ...prev, category: e.target.value }))}
+                  value={quickActionData.categoryId}
+                  onChange={(e) => {
+                    const selectedCategory = categories.find(c => c.id === e.target.value);
+                    setQuickActionData(prev => ({ 
+                      ...prev, 
+                      categoryId: e.target.value,
+                      category: selectedCategory?.name || ''
+                    }));
+                  }}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 >
                   <option value="">Select category</option>
-                  {quickActionType === 'income' ? (
-                    <>
-                      <option value="Salary">Salary</option>
-                      <option value="Freelance">Freelance</option>
-                      <option value="Investment">Investment</option>
-                      <option value="Other Income">Other Income</option>
-                    </>
-                  ) : (
-                    <>
-                      <option value="Food">Food & Dining</option>
-                      <option value="Transportation">Transportation</option>
-                      <option value="Shopping">Shopping</option>
-                      <option value="Utilities">Utilities</option>
-                      <option value="Entertainment">Entertainment</option>
-                      <option value="Health">Health</option>
-                      <option value="Other">Other</option>
-                    </>
-                  )}
+                  {categories
+                    .filter(cat => cat.type === quickActionType)
+                    .map(category => (
+                      <option key={category.id} value={category.id}>
+                        {category.icon} {category.name}
+                      </option>
+                    ))
+                  }
                 </select>
               </div>
 

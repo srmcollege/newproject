@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, Lock, Mail, Shield, ArrowRight, CheckCircle, AlertCircle } from 'lucide-react';
 import ForgotPassword from './ForgotPassword';
 import { supabase, authHelpers } from '../lib/supabase';
@@ -25,7 +25,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     confirmPassword: '',
     firstName: '',
     lastName: '',
-    phone: ''
+    phone: '',
+    dateOfBirth: ''
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -120,7 +121,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             if (user) {
               const profile = await authHelpers.getCurrentUser();
               if (profile) {
-                setSuccess(`Welcome back, ${profile.first_name}! Redirecting to dashboard...`);
+                setSuccess(`Welcome back, ${profile.first_name}! Loading your account data...`);
                 setTimeout(() => {
                   onLogin(profile);
                 }, 1000);
@@ -152,7 +153,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       } else {
         // Sign Up Logic
         if (!formData.email || !formData.password || !formData.confirmPassword || 
-            !formData.firstName || !formData.lastName || !formData.phone) {
+            !formData.firstName || !formData.lastName) {
           throw new Error('Please fill in all required fields');
         }
 
@@ -170,7 +171,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             await authHelpers.signUp(formData.email, formData.password, {
               firstName: formData.firstName,
               lastName: formData.lastName,
-              phone: formData.phone
+              phone: formData.phone,
+              dateOfBirth: formData.dateOfBirth
             });
             
             setSuccess('Account created successfully! Please check your email to verify your account, then sign in.');
@@ -184,7 +186,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 confirmPassword: '',
                 firstName: '',
                 lastName: '',
-                phone: ''
+                phone: '',
+                dateOfBirth: ''
               });
               setSuccess('');
             }, 3000);
@@ -221,7 +224,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               confirmPassword: '',
               firstName: '',
               lastName: '',
-              phone: ''
+              phone: '',
+              dateOfBirth: ''
             });
             setSuccess('');
           }, 2000);
@@ -255,7 +259,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       confirmPassword: '',
       firstName: '',
       lastName: '',
-      phone: ''
+      phone: '',
+      dateOfBirth: ''
     });
   };
 
@@ -474,20 +479,34 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
                 {/* Phone (Sign Up Only) */}
                 {!isLogin && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Phone Number *
-                    </label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                      placeholder="+91 98765 43210"
-                      required={!isLogin}
-                    />
-                  </div>
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Phone Number
+                      </label>
+                      <input
+                        type="tel"
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        placeholder="+91 98765 43210"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Date of Birth
+                      </label>
+                      <input
+                        type="date"
+                        name="dateOfBirth"
+                        value={formData.dateOfBirth}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                      />
+                    </div>
+                  </>
                 )}
 
                 {/* Password */}

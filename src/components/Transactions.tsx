@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Download, ArrowUpRight, ArrowDownLeft, Calendar } from 'lucide-react';
+import { Search, Filter, Download, ArrowUpRight, ArrowDownLeft, Calendar, RefreshCw } from 'lucide-react';
 import { supabase, dbHelpers } from '../lib/supabase';
 
 interface TransactionsProps {
@@ -20,6 +20,7 @@ interface Transaction {
 const Transactions: React.FC<TransactionsProps> = ({ currentUser }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -39,7 +40,7 @@ const Transactions: React.FC<TransactionsProps> = ({ currentUser }) => {
             transaction_type: 'income',
             amount: 207500,
             description: 'Salary Deposit',
-            category: 'Income',
+            category: 'Salary',
             transaction_date: '2024-01-15',
             status: 'completed',
             accounts: { account_name: 'Checking Account' }
@@ -49,7 +50,7 @@ const Transactions: React.FC<TransactionsProps> = ({ currentUser }) => {
             transaction_type: 'expense',
             amount: -3765,
             description: 'Swiggy Order',
-            category: 'Food',
+            category: 'Food & Dining',
             transaction_date: '2024-01-14',
             status: 'completed',
             accounts: { account_name: 'Checking Account' }
@@ -91,7 +92,7 @@ const Transactions: React.FC<TransactionsProps> = ({ currentUser }) => {
 
       // Load transactions from database
       const transactionsData = await dbHelpers.getUserTransactions(currentUser.id, 100);
-      setTransactions(transactionsData);
+      setTransactions(transactionsData.map(t => ({ ...t, category: t.transaction_categories?.name || 'Other' })));
       
     } catch (err) {
       console.error('Error loading transactions:', err);
@@ -100,13 +101,15 @@ const Transactions: React.FC<TransactionsProps> = ({ currentUser }) => {
     }
   };
 
-  const categories = ['all', 'Income', 'Food', 'Utilities', 'Shopping', 'Transportation', 'Investment', 'Health'];
+  const categories = ['all', 'Salary', 'Food & Dining', 'Utilities', 'Shopping', 'Transportation', 'Investment', 'Healthcare'];
+  const statuses = ['all', 'completed', 'pending', 'failed'];
 
   const filteredTransactions = transactions.filter(transaction => {
     const matchesSearch = transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          transaction.category.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = filterCategory === 'all' || transaction.category === filterCategory;
-    return matchesSearch && matchesCategory;
+    const matchesStatus = filterStatus === 'all' || transaction.status === filterStatus;
+    return matchesSearch && matchesCategory && matchesStatus;
   });
 
   const formatCurrency = (amount: number) => {
@@ -136,6 +139,10 @@ const Transactions: React.FC<TransactionsProps> = ({ currentUser }) => {
         <button className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
           <Download className="w-4 h-4" />
           <span>Export</span>
+        </button>
+        <button onClick={loadTransactions} className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+          <RefreshCw className="w-4 h-4" />
+          <span>Refresh</span>
         </button>
       </div>
 
@@ -168,6 +175,22 @@ const Transactions: React.FC<TransactionsProps> = ({ currentUser }) => {
                 ))}
               </select>
             </div>
+
+            <div className="flex items-center space-x-2">
+              <Filter className="w-4 h-4 text-gray-400" />
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">All Status</option>
+                {statuses.slice(1).map(status => (
+                  <option key={status} value={status}>
+                    {status.charAt(0).toUpperCase() + status.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="flex items-center space-x-2">
@@ -195,6 +218,7 @@ const Transactions: React.FC<TransactionsProps> = ({ currentUser }) => {
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Account</th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
               </tr>
             </thead>
@@ -213,25 +237,35 @@ const Transactions: React.FC<TransactionsProps> = ({ currentUser }) => {
                       </div>
                       <div>
                         <p className="font-medium text-gray-900">{transaction.description}</p>
-                        <p className="text-sm text-gray-500">Transaction ID: {transaction.id}</p>
+                        <p className="text-sm text-gray-500">Ref: {transaction.reference_number || transaction.id}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      transaction.category === 'Income' ? 'bg-green-100 text-green-800' :
-                      transaction.category === 'Food' ? 'bg-blue-100 text-blue-800' :
+                      transaction.category === 'Salary' ? 'bg-green-100 text-green-800' :
+                      transaction.category === 'Food & Dining' ? 'bg-blue-100 text-blue-800' :
                       transaction.category === 'Utilities' ? 'bg-yellow-100 text-yellow-800' :
                       transaction.category === 'Shopping' ? 'bg-purple-100 text-purple-800' :
                       transaction.category === 'Transportation' ? 'bg-indigo-100 text-indigo-800' :
-                      transaction.category === 'Investment' ? 'bg-green-100 text-green-800' :
+                      transaction.category.includes('Investment') ? 'bg-green-100 text-green-800' :
                       'bg-gray-100 text-gray-800'
                     }`}>
                       {transaction.category}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">{transaction.accounts?.account_name || 'Account'}</td>
-                  <td className="px-6 py-4 text-sm text-gray-900">{new Date(transaction.transaction_date).toLocaleDateString()}</td>
+                  <td className="px-6 py-4 text-sm text-gray-900">{new Date(transaction.transaction_date).toLocaleDateString('en-IN')}</td>
+                  <td className="px-6 py-4">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      transaction.status === 'completed' ? 'bg-green-100 text-green-800' :
+                      transaction.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      transaction.status === 'failed' ? 'bg-red-100 text-red-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
+                    </span>
+                  </td>
                   <td className="px-6 py-4 text-right">
                     <span className={`font-semibold ${
                       transaction.transaction_type === 'income' ? 'text-green-600' : 'text-red-600'
