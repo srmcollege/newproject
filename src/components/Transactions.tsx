@@ -92,7 +92,11 @@ const Transactions: React.FC<TransactionsProps> = ({ currentUser }) => {
 
       // Load transactions from database
       const transactionsData = await dbHelpers.getUserTransactions(currentUser.id, 100);
-      setTransactions(transactionsData.map(t => ({ ...t, category: t.transaction_categories?.name || 'Other' })));
+      setTransactions(transactionsData.map(t => ({ 
+        ...t, 
+        category: t.category || 'Other',
+        accounts: t.accounts || { account_name: 'Account' }
+      })));
       
     } catch (err) {
       console.error('Error loading transactions:', err);

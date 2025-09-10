@@ -292,10 +292,8 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser }) => {
 
   const loadCategoriesAndShowModal = async () => {
     try {
-      if (supabase) {
-        const categoriesData = await dbHelpers.getTransactionCategories();
-        setCategories(categoriesData);
-      }
+      const categoriesData = dbHelpers.getTransactionCategories();
+      setCategories(categoriesData);
       setShowQuickAction(true);
     } catch (error) {
       console.error('Error loading categories:', error);

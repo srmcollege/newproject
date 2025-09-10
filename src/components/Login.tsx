@@ -117,8 +117,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         if (supabase) {
           // Use Supabase authentication
           try {
-            const { user } = await authHelpers.signIn(formData.email, formData.password);
-            if (user) {
+            const data = await authHelpers.signIn(formData.email, formData.password);
+            if (data.user) {
               const profile = await authHelpers.getCurrentUser();
               if (profile) {
                 setSuccess(`Welcome back, ${profile.first_name}! Loading your account data...`);

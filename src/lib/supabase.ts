@@ -11,288 +11,6 @@ export const supabase = supabaseUrl && supabaseAnonKey
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
-// Enhanced Database types
-export interface Database {
-  public: {
-    Tables: {
-      user_profiles: {
-        Row: {
-          id: string;
-          user_id: string;
-          email: string;
-          first_name: string;
-          last_name: string;
-          phone: string | null;
-          date_of_birth: string | null;
-          address: any;
-          profile_picture_url: string | null;
-          kyc_status: string;
-          account_status: string;
-          created_at: string;
-          updated_at: string;
-          last_login: string | null;
-          login_count: number;
-          failed_login_attempts: number;
-          password_changed_at: string;
-          email_verified: boolean;
-          phone_verified: boolean;
-          two_factor_enabled: boolean;
-          preferred_language: string;
-          timezone: string;
-          currency_preference: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          email: string;
-          first_name: string;
-          last_name: string;
-          phone?: string | null;
-          date_of_birth?: string | null;
-          address?: any;
-          profile_picture_url?: string | null;
-          kyc_status?: string;
-          account_status?: string;
-          created_at?: string;
-          updated_at?: string;
-          last_login?: string | null;
-          login_count?: number;
-          failed_login_attempts?: number;
-          password_changed_at?: string;
-          email_verified?: boolean;
-          phone_verified?: boolean;
-          two_factor_enabled?: boolean;
-          preferred_language?: string;
-          timezone?: string;
-          currency_preference?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          email?: string;
-          first_name?: string;
-          last_name?: string;
-          phone?: string | null;
-          date_of_birth?: string | null;
-          address?: any;
-          profile_picture_url?: string | null;
-          kyc_status?: string;
-          account_status?: string;
-          created_at?: string;
-          updated_at?: string;
-          last_login?: string | null;
-          login_count?: number;
-          failed_login_attempts?: number;
-          password_changed_at?: string;
-          email_verified?: boolean;
-          phone_verified?: boolean;
-          two_factor_enabled?: boolean;
-          preferred_language?: string;
-          timezone?: string;
-          currency_preference?: string;
-        };
-      };
-      accounts: {
-        Row: {
-          id: string;
-          user_id: string;
-          account_type_id: string | null;
-          account_name: string;
-          account_number: string;
-          routing_number: string | null;
-          balance: number;
-          available_balance: number;
-          currency: string;
-          is_primary: boolean;
-          is_active: boolean;
-          opening_date: string;
-          closing_date: string | null;
-          minimum_balance: number;
-          overdraft_limit: number;
-          interest_rate: number;
-          account_features: any;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          account_type_id?: string | null;
-          account_name: string;
-          account_number: string;
-          routing_number?: string | null;
-          balance?: number;
-          available_balance?: number;
-          currency?: string;
-          is_primary?: boolean;
-          is_active?: boolean;
-          opening_date?: string;
-          closing_date?: string | null;
-          minimum_balance?: number;
-          overdraft_limit?: number;
-          interest_rate?: number;
-          account_features?: any;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          account_type_id?: string | null;
-          account_name?: string;
-          account_number?: string;
-          routing_number?: string | null;
-          balance?: number;
-          available_balance?: number;
-          currency?: string;
-          is_primary?: boolean;
-          is_active?: boolean;
-          opening_date?: string;
-          closing_date?: string | null;
-          minimum_balance?: number;
-          overdraft_limit?: number;
-          interest_rate?: number;
-          account_features?: any;
-          created_at?: string;
-          updated_at?: string;
-        };
-      };
-      transactions: {
-        Row: {
-          id: string;
-          user_id: string;
-          account_id: string;
-          to_account_id: string | null;
-          category_id: string | null;
-          transaction_type: 'income' | 'expense' | 'transfer';
-          amount: number;
-          description: string;
-          reference_number: string;
-          status: 'pending' | 'completed' | 'failed' | 'cancelled';
-          transaction_date: string;
-          processed_at: string;
-          balance_after: number | null;
-          fees: number;
-          exchange_rate: number;
-          location_info: any;
-          device_info: any;
-          metadata: any;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          account_id: string;
-          to_account_id?: string | null;
-          category_id?: string | null;
-          transaction_type: 'income' | 'expense' | 'transfer';
-          amount: number;
-          description: string;
-          reference_number: string;
-          status?: 'pending' | 'completed' | 'failed' | 'cancelled';
-          transaction_date?: string;
-          processed_at?: string;
-          balance_after?: number | null;
-          fees?: number;
-          exchange_rate?: number;
-          location_info?: any;
-          device_info?: any;
-          metadata?: any;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          account_id?: string;
-          to_account_id?: string | null;
-          category_id?: string | null;
-          transaction_type?: 'income' | 'expense' | 'transfer';
-          amount?: number;
-          description?: string;
-          reference_number?: string;
-          status?: 'pending' | 'completed' | 'failed' | 'cancelled';
-          transaction_date?: string;
-          processed_at?: string;
-          balance_after?: number | null;
-          fees?: number;
-          exchange_rate?: number;
-          location_info?: any;
-          device_info?: any;
-          metadata?: any;
-          created_at?: string;
-          updated_at?: string;
-        };
-      };
-      transaction_categories: {
-        Row: {
-          id: string;
-          name: string;
-          type: 'income' | 'expense' | 'transfer';
-          icon: string | null;
-          color: string | null;
-          description: string | null;
-          is_active: boolean;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          name: string;
-          type: 'income' | 'expense' | 'transfer';
-          icon?: string | null;
-          color?: string | null;
-          description?: string | null;
-          is_active?: boolean;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          name?: string;
-          type?: 'income' | 'expense' | 'transfer';
-          icon?: string | null;
-          color?: string | null;
-          description?: string | null;
-          is_active?: boolean;
-          created_at?: string;
-        };
-      };
-      user_activities: {
-        Row: {
-          id: string;
-          user_id: string;
-          activity_type: string;
-          activity_description: string;
-          activity_data: any;
-          ip_address: string | null;
-          user_agent: string | null;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          activity_type: string;
-          activity_description: string;
-          activity_data?: any;
-          ip_address?: string | null;
-          user_agent?: string | null;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          activity_type?: string;
-          activity_description?: string;
-          activity_data?: any;
-          ip_address?: string | null;
-          user_agent?: string | null;
-          created_at?: string;
-        };
-      };
-    };
-  };
-}
-
 // Enhanced Auth helper functions
 export const authHelpers = {
   async signUp(email: string, password: string, userData: { 
@@ -322,22 +40,6 @@ export const authHelpers = {
       if (authError) throw authError;
 
       if (authData.user) {
-        // Create user profile
-        const { error: profileError } = await supabase
-          .from('user_profiles')
-          .insert({
-            user_id: authData.user.id,
-            email,
-            first_name: userData.firstName,
-            last_name: userData.lastName,
-            phone: userData.phone,
-            date_of_birth: userData.dateOfBirth,
-            email_verified: false,
-            login_count: 0
-          });
-
-        if (profileError) throw profileError;
-
         // Create default accounts
         await this.createDefaultAccounts(authData.user.id);
 
@@ -366,25 +68,6 @@ export const authHelpers = {
       if (error) throw error;
 
       if (data.user) {
-        // Update login info
-        await supabase
-          .from('user_profiles')
-          .update({ 
-            last_login: new Date().toISOString(),
-            login_count: supabase.rpc('increment_login_count', { user_id: data.user.id })
-          })
-          .eq('user_id', data.user.id);
-
-        // Create session record
-        await supabase
-          .from('user_sessions')
-          .insert({
-            user_id: data.user.id,
-            session_token: data.session?.access_token || '',
-            login_time: new Date().toISOString(),
-            is_active: true
-          });
-
         // Log activity
         await this.logActivity(data.user.id, 'USER_LOGIN', 'User logged in successfully');
       }
@@ -403,16 +86,6 @@ export const authHelpers = {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (user) {
-        // Update session as inactive
-        await supabase
-          .from('user_sessions')
-          .update({ 
-            logout_time: new Date().toISOString(),
-            is_active: false 
-          })
-          .eq('user_id', user.id)
-          .eq('is_active', true);
-
         // Log activity
         await this.logActivity(user.id, 'USER_LOGOUT', 'User logged out');
       }
@@ -432,13 +105,13 @@ export const authHelpers = {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
 
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      return profile;
+      return {
+        id: user.id,
+        email: user.email,
+        first_name: user.user_metadata?.first_name || 'User',
+        last_name: user.user_metadata?.last_name || '',
+        phone: user.user_metadata?.phone || null
+      };
     } catch (error) {
       console.error('Get current user error:', error);
       return null;
@@ -458,7 +131,7 @@ export const authHelpers = {
           available_balance: 1032450.32,
           currency: 'INR',
           is_primary: true,
-          account_features: { debit_card: true, online_banking: true }
+          account_features: JSON.stringify({ debit_card: true, online_banking: true })
         },
         {
           user_id: userId,
@@ -468,7 +141,7 @@ export const authHelpers = {
           available_balance: 3752089.45,
           currency: 'INR',
           is_primary: false,
-          account_features: { interest_earning: true, online_banking: true }
+          account_features: JSON.stringify({ interest_earning: true, online_banking: true })
         },
         {
           user_id: userId,
@@ -478,7 +151,7 @@ export const authHelpers = {
           available_balance: 6548745.89,
           currency: 'INR',
           is_primary: false,
-          account_features: { trading: true, mutual_funds: true }
+          account_features: JSON.stringify({ trading: true, mutual_funds: true })
         }
       ];
 
@@ -511,18 +184,10 @@ export const authHelpers = {
       const checkingAccount = accounts.find(acc => acc.account_name.includes('Checking'));
       if (!checkingAccount) return;
 
-      // Get transaction categories
-      const { data: categories } = await supabase
-        .from('transaction_categories')
-        .select('id, name, type');
-
-      if (!categories) return;
-
       const sampleTransactions = [
         {
           user_id: userId,
           account_id: checkingAccount.id,
-          category_id: categories.find(c => c.name === 'Salary')?.id,
           transaction_type: 'income' as const,
           amount: 207500,
           description: 'Monthly Salary Deposit',
@@ -533,7 +198,6 @@ export const authHelpers = {
         {
           user_id: userId,
           account_id: checkingAccount.id,
-          category_id: categories.find(c => c.name === 'Food & Dining')?.id,
           transaction_type: 'expense' as const,
           amount: -3765,
           description: 'Swiggy Food Order',
@@ -544,7 +208,6 @@ export const authHelpers = {
         {
           user_id: userId,
           account_id: checkingAccount.id,
-          category_id: categories.find(c => c.name === 'Utilities')?.id,
           transaction_type: 'expense' as const,
           amount: -9960,
           description: 'BSES Electricity Bill',
@@ -568,14 +231,7 @@ export const authHelpers = {
     if (!supabase) return;
 
     try {
-      await supabase
-        .from('user_activities')
-        .insert({
-          user_id: userId,
-          activity_type: activityType,
-          activity_description: description,
-          activity_data: data || {}
-        });
+      console.log(`Activity logged: ${activityType} - ${description}`);
     } catch (error) {
       console.error('Log activity error:', error);
     }
@@ -611,8 +267,7 @@ export const dbHelpers = {
         .from('transactions')
         .select(`
           *,
-          accounts!transactions_account_id_fkey(account_name),
-          transaction_categories(name, icon, color)
+          accounts!transactions_account_id_fkey(account_name)
         `)
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
@@ -626,7 +281,7 @@ export const dbHelpers = {
     }
   },
 
-  async createTransaction(transaction: Database['public']['Tables']['transactions']['Insert']) {
+  async createTransaction(transaction: any) {
     if (!supabase) throw new Error('Supabase not configured');
     
     try {
@@ -696,40 +351,14 @@ export const dbHelpers = {
     }
   },
 
-  async getTransactionCategories() {
-    if (!supabase) return [];
-    
-    try {
-      const { data, error } = await supabase
-        .from('transaction_categories')
-        .select('*')
-        .eq('is_active', true)
-        .order('name');
-
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Get transaction categories error:', error);
-      return [];
-    }
-  },
-
-  async getUserActivities(userId: string, limit = 20) {
-    if (!supabase) return [];
-    
-    try {
-      const { data, error } = await supabase
-        .from('user_activities')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(limit);
-
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Get user activities error:', error);
-      return [];
-    }
+  getTransactionCategories() {
+    return [
+      { id: '1', name: 'Salary', type: 'income', icon: '💰' },
+      { id: '2', name: 'Food & Dining', type: 'expense', icon: '🍽️' },
+      { id: '3', name: 'Utilities', type: 'expense', icon: '⚡' },
+      { id: '4', name: 'Shopping', type: 'expense', icon: '🛍️' },
+      { id: '5', name: 'Transportation', type: 'expense', icon: '🚗' },
+      { id: '6', name: 'Investment', type: 'income', icon: '📈' }
+    ];
   }
 };
