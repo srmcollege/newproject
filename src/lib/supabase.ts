@@ -11,20 +11,18 @@ export const supabase = supabaseUrl && supabaseAnonKey
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
-// Enhanced Auth helper functions
+// Auth helper functions
 export const authHelpers = {
   async signUp(email: string, password: string, userData: { 
     firstName: string; 
     lastName: string; 
     phone?: string;
-    dateOfBirth?: string;
   }) {
     if (!supabase) {
       throw new Error('Supabase not configured');
     }
 
     try {
-      // Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -40,11 +38,7 @@ export const authHelpers = {
       if (authError) throw authError;
 
       if (authData.user) {
-        // Create default accounts
         await this.createDefaultAccounts(authData.user.id);
-
-        // Log activity
-        await this.logActivity(authData.user.id, 'USER_SIGNUP', 'User account created successfully');
       }
 
       return authData;
@@ -66,12 +60,6 @@ export const authHelpers = {
       });
 
       if (error) throw error;
-
-      if (data.user) {
-        // Log activity
-        await this.logActivity(data.user.id, 'USER_LOGIN', 'User logged in successfully');
-      }
-
       return data;
     } catch (error) {
       console.error('Sign in error:', error);
@@ -83,13 +71,6 @@ export const authHelpers = {
     if (!supabase) return;
     
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        // Log activity
-        await this.logActivity(user.id, 'USER_LOGOUT', 'User logged out');
-      }
-
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
     } catch (error) {
@@ -126,32 +107,32 @@ export const authHelpers = {
         {
           user_id: userId,
           account_name: 'Primary Checking',
+          account_type: 'checking',
           account_number: `CHK${Date.now()}${Math.random().toString().slice(2, 6)}`,
           balance: 1032450.32,
-          available_balance: 1032450.32,
           currency: 'INR',
           is_primary: true,
-          account_features: JSON.stringify({ debit_card: true, online_banking: true })
+          is_active: true
         },
         {
           user_id: userId,
           account_name: 'Savings Account',
+          account_type: 'savings',
           account_number: `SAV${Date.now()}${Math.random().toString().slice(2, 6)}`,
           balance: 3752089.45,
-          available_balance: 3752089.45,
           currency: 'INR',
           is_primary: false,
-          account_features: JSON.stringify({ interest_earning: true, online_banking: true })
+          is_active: true
         },
         {
           user_id: userId,
           account_name: 'Investment Account',
+          account_type: 'investment',
           account_number: `INV${Date.now()}${Math.random().toString().slice(2, 6)}`,
           balance: 6548745.89,
-          available_balance: 6548745.89,
           currency: 'INR',
           is_primary: false,
-          account_features: JSON.stringify({ trading: true, mutual_funds: true })
+          is_active: true
         }
       ];
 
@@ -161,7 +142,6 @@ export const authHelpers = {
 
       if (error) throw error;
 
-      // Create sample transactions for new user
       await this.createSampleTransactions(userId);
     } catch (error) {
       console.error('Create default accounts error:', error);
@@ -173,7 +153,6 @@ export const authHelpers = {
     if (!supabase) return;
 
     try {
-      // Get user's accounts
       const { data: accounts } = await supabase
         .from('accounts')
         .select('id, account_name')
@@ -188,32 +167,35 @@ export const authHelpers = {
         {
           user_id: userId,
           account_id: checkingAccount.id,
-          transaction_type: 'income' as const,
+          transaction_type: 'income',
           amount: 207500,
           description: 'Monthly Salary Deposit',
+          category: 'Salary',
           reference_number: `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           transaction_date: new Date().toISOString().split('T')[0],
-          balance_after: 1032450.32
+          status: 'completed'
         },
         {
           user_id: userId,
           account_id: checkingAccount.id,
-          transaction_type: 'expense' as const,
+          transaction_type: 'expense',
           amount: -3765,
           description: 'Swiggy Food Order',
+          category: 'Food & Dining',
           reference_number: `TXN_${Date.now() + 1}_${Math.random().toString(36).substr(2, 9)}`,
           transaction_date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-          balance_after: 1028685.32
+          status: 'completed'
         },
         {
           user_id: userId,
           account_id: checkingAccount.id,
-          transaction_type: 'expense' as const,
+          transaction_type: 'expense',
           amount: -9960,
           description: 'BSES Electricity Bill',
+          category: 'Utilities',
           reference_number: `TXN_${Date.now() + 2}_${Math.random().toString(36).substr(2, 9)}`,
           transaction_date: new Date(Date.now() - 172800000).toISOString().split('T')[0],
-          balance_after: 1018725.32
+          status: 'completed'
         }
       ];
 
@@ -225,20 +207,10 @@ export const authHelpers = {
     } catch (error) {
       console.error('Create sample transactions error:', error);
     }
-  },
-
-  async logActivity(userId: string, activityType: string, description: string, data?: any) {
-    if (!supabase) return;
-
-    try {
-      console.log(`Activity logged: ${activityType} - ${description}`);
-    } catch (error) {
-      console.error('Log activity error:', error);
-    }
   }
 };
 
-// Enhanced Database helper functions
+// Database helper functions
 export const dbHelpers = {
   async getUserAccounts(userId: string) {
     if (!supabase) return [];
@@ -285,7 +257,6 @@ export const dbHelpers = {
     if (!supabase) throw new Error('Supabase not configured');
     
     try {
-      // Generate unique reference number
       const referenceNumber = `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
       const { data, error } = await supabase
@@ -298,15 +269,6 @@ export const dbHelpers = {
         .single();
 
       if (error) throw error;
-
-      // Log activity
-      await authHelpers.logActivity(
-        transaction.user_id, 
-        'TRANSACTION_CREATED', 
-        `Transaction created: ${transaction.description}`,
-        { amount: transaction.amount, type: transaction.transaction_type }
-      );
-
       return data;
     } catch (error) {
       console.error('Create transaction error:', error);
@@ -321,8 +283,7 @@ export const dbHelpers = {
       const { error } = await supabase
         .from('accounts')
         .update({ 
-          balance: newBalance,
-          available_balance: newBalance 
+          balance: newBalance
         })
         .eq('id', accountId);
 
@@ -330,24 +291,6 @@ export const dbHelpers = {
     } catch (error) {
       console.error('Update account balance error:', error);
       throw error;
-    }
-  },
-
-  async getAccountById(accountId: string) {
-    if (!supabase) return null;
-    
-    try {
-      const { data, error } = await supabase
-        .from('accounts')
-        .select('*')
-        .eq('id', accountId)
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Get account by ID error:', error);
-      return null;
     }
   },
 
