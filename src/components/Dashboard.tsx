@@ -48,8 +48,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser }) => {
   const [quickActionData, setQuickActionData] = useState({
     amount: '',
     description: '',
-    category: '',
-    categoryId: ''
+    category: ''
   });
 
   useEffect(() => {
@@ -161,7 +160,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser }) => {
   const handleQuickAction = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!quickActionData.amount || !quickActionData.description || !quickActionData.categoryId) {
+    if (!quickActionData.amount || !quickActionData.description || !quickActionData.category) {
       alert('Please fill in all fields');
       return;
     }
@@ -180,11 +179,11 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser }) => {
         const transactionData = {
           user_id: currentUser.id,
           account_id: primaryAccount.id,
-          category_id: quickActionData.categoryId,
+          category: quickActionData.category,
           transaction_type: quickActionType,
           amount: quickActionType === 'income' ? amount : -amount,
           description: quickActionData.description,
-          status: 'completed' as const,
+          status: 'completed',
           transaction_date: new Date().toISOString().split('T')[0]
         };
 
@@ -207,7 +206,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser }) => {
       }
 
       // Reset form
-      setQuickActionData({ amount: '', description: '', category: '', categoryId: '' });
+      setQuickActionData({ amount: '', description: '', category: '' });
       setShowQuickAction(false);
       
     } catch (error) {
@@ -551,13 +550,11 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser }) => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
                 <select
-                  value={quickActionData.categoryId}
+                  value={quickActionData.category}
                   onChange={(e) => {
-                    const selectedCategory = categories.find(c => c.id === e.target.value);
                     setQuickActionData(prev => ({ 
                       ...prev, 
-                      categoryId: e.target.value,
-                      category: selectedCategory?.name || ''
+                      category: e.target.value
                     }));
                   }}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -567,7 +564,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser }) => {
                   {categories
                     .filter(cat => cat.type === quickActionType)
                     .map(category => (
-                      <option key={category.id} value={category.id}>
+                      <option key={category.id} value={category.name}>
                         {category.icon} {category.name}
                       </option>
                     ))
