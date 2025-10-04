@@ -115,7 +115,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         }
 
         if (supabase) {
-          // Use Supabase authentication
           try {
             const data = await authHelpers.signIn(formData.email, formData.password);
             if (data.user) {
@@ -128,7 +127,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               }
             }
           } catch (supabaseError: any) {
-            // If Supabase auth fails, try demo accounts
             const user = findUser(formData.email, formData.password);
             if (!user) {
               throw new Error('Invalid email or password. Try one of the demo accounts below.');
@@ -139,7 +137,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             }, 1000);
           }
         } else {
-          // Demo mode only
           const user = findUser(formData.email, formData.password);
           if (!user) {
             throw new Error('Invalid email or password. Try one of the demo accounts below.');

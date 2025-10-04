@@ -53,18 +53,13 @@ export const authHelpers = {
       throw new Error('Supabase not configured');
     }
 
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Sign in error:', error);
-      throw error;
-    }
+    if (error) throw error;
+    return data;
   },
 
   async signOut() {
