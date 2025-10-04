@@ -116,39 +116,7 @@ function App() {
     );
   }
 
-  if (!isAuthenticated) {
-    return <Login onLogin={handleLogin} />;
-  }
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      <Header 
-        sidebarOpen={sidebarOpen} 
-        setSidebarOpen={setSidebarOpen} 
-        setShowChatbot={setShowChatbot}
-        currentUser={currentUser}
-      />
-      
-      <div className="flex">
-        <Sidebar 
-          activeTab={activeTab} 
-          setActiveTab={setActiveTab}
-          sidebarOpen={sidebarOpen}
-          setSidebarOpen={setSidebarOpen}
-        />
-        
-        <main className="flex-1 lg:ml-64 pt-16">
-          <div className="p-4 sm:p-6 lg:p-8">
-            {renderContent()}
-          </div>
-        </main>
-      </div>
-      
-      {showChatbot && (
-        <AIChatbot onClose={() => setShowChatbot(false)} currentUser={currentUser} />
-      )}
-    </div>
-  );
+  return <Login onLogin={handleLogin} />;
 }
 
 export default App;
