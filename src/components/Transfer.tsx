@@ -25,10 +25,30 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
+  const [transferCategoryId, setTransferCategoryId] = useState<string | null>(null);
 
   React.useEffect(() => {
     loadAccounts();
+    loadTransferCategory();
   }, [currentUser]);
+
+  const loadTransferCategory = async () => {
+    try {
+      if (!supabase) return;
+
+      const { data: categories } = await supabase
+        .from('transaction_categories')
+        .select('id, name')
+        .eq('type', 'expense')
+        .limit(1);
+
+      if (categories && categories.length > 0) {
+        setTransferCategoryId(categories[0].id);
+      }
+    } catch (err) {
+      console.error('Error loading transfer category:', err);
+    }
+  };
 
   const loadAccounts = async () => {
     try {
@@ -122,7 +142,7 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
 
         if (supabase && currentUser?.id) {
           const toAccountData = accounts.find(acc => acc.account_name === toAccount);
-          
+
           // Create transfer transaction
           await dbHelpers.createTransaction({
               user_id: currentUser.id,
@@ -131,8 +151,9 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
               transaction_type: 'transfer',
               amount: -transferAmount,
               description: memo || `Transfer from ${fromAccount} to ${toAccount}`,
-              category: 'Transfer',
-              status: 'completed'
+              category_id: transferCategoryId,
+              status: 'completed',
+              transaction_date: new Date().toISOString().split('T')[0]
             });
 
           // Update account balances
@@ -171,7 +192,7 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
             transaction_type: 'expense',
             amount: -transferAmount,
             description: `Transfer to ${recipient}${memo ? ` - ${memo}` : ''}`,
-            category: 'Transfer',
+            category_id: transferCategoryId,
             status: 'completed',
             transaction_date: new Date().toISOString().split('T')[0]
           });

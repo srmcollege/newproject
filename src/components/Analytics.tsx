@@ -46,10 +46,10 @@ const Analytics: React.FC<AnalyticsProps> = ({ currentUser }) => {
     }
   };
 
-  const stats = [
+  const stats = analyticsData ? [
     {
       title: 'Total Income',
-      value: '₹7,01,350.00',
+      value: formatCurrency(analyticsData.totalIncome),
       change: '+12.5%',
       trend: 'up',
       icon: TrendingUp,
@@ -57,7 +57,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ currentUser }) => {
     },
     {
       title: 'Total Expenses',
-      value: '₹5,17,133.50',
+      value: formatCurrency(analyticsData.totalExpenses),
       change: '+5.2%',
       trend: 'up',
       icon: TrendingDown,
@@ -65,28 +65,78 @@ const Analytics: React.FC<AnalyticsProps> = ({ currentUser }) => {
     },
     {
       title: 'Net Savings',
-      value: '₹1,84,216.50',
-      change: '+22.8%',
+      value: formatCurrency(analyticsData.netSavings),
+      change: analyticsData.netSavings >= 0 ? '+22.8%' : '-22.8%',
+      trend: analyticsData.netSavings >= 0 ? 'up' : 'down',
+      icon: DollarSign,
+      color: 'text-blue-600'
+    },
+    {
+      title: 'Total Balance',
+      value: formatCurrency(analyticsData.accounts.reduce((sum: number, acc: any) => sum + parseFloat(acc.balance), 0)),
+      change: '+8.5%',
+      trend: 'up',
+      icon: Target,
+      color: 'text-purple-600'
+    }
+  ] : [
+    {
+      title: 'Total Income',
+      value: '₹0',
+      change: '0%',
+      trend: 'up',
+      icon: TrendingUp,
+      color: 'text-green-600'
+    },
+    {
+      title: 'Total Expenses',
+      value: '₹0',
+      change: '0%',
+      trend: 'up',
+      icon: TrendingDown,
+      color: 'text-red-600'
+    },
+    {
+      title: 'Net Savings',
+      value: '₹0',
+      change: '0%',
       trend: 'up',
       icon: DollarSign,
       color: 'text-blue-600'
     },
     {
-      title: 'Savings Goal',
-      value: '74%',
-      change: '+8.5%',
+      title: 'Total Balance',
+      value: '₹0',
+      change: '0%',
       trend: 'up',
       icon: Target,
       color: 'text-purple-600'
     }
   ];
 
-  const categoryData = [
-    { category: 'Food & Dining', amount: 102940, percentage: 35, color: 'bg-blue-500' },
-    { category: 'Transportation', amount: 73870, percentage: 25, color: 'bg-green-500' },
-    { category: 'Shopping', amount: 55615, percentage: 19, color: 'bg-purple-500' },
-    { category: 'Utilities', amount: 37350, percentage: 13, color: 'bg-orange-500' },
-    { category: 'Entertainment', amount: 23240, percentage: 8, color: 'bg-pink-500' },
+  const categoryData = analyticsData ? (() => {
+    const categoryMap = new Map<string, number>();
+    analyticsData.transactions
+      .filter((t: any) => t.transaction_type === 'expense')
+      .forEach((t: any) => {
+        const category = t.category || 'Other';
+        categoryMap.set(category, (categoryMap.get(category) || 0) + Math.abs(t.amount));
+      });
+
+    const total = Array.from(categoryMap.values()).reduce((sum, val) => sum + val, 0);
+    const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500', 'bg-indigo-500'];
+
+    return Array.from(categoryMap.entries())
+      .map(([category, amount], index) => ({
+        category,
+        amount,
+        percentage: total > 0 ? Math.round((amount / total) * 100) : 0,
+        color: colors[index % colors.length]
+      }))
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 5);
+  })() : [
+    { category: 'No Data', amount: 0, percentage: 0, color: 'bg-gray-500' }
   ];
 
   const monthlyData = [
