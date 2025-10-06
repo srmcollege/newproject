@@ -50,6 +50,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser }) => {
     description: '',
     category: ''
   });
+  const [categories, setCategories] = useState<any[]>([]);
 
   useEffect(() => {
     loadDashboardData();
@@ -175,11 +176,14 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser }) => {
       if (supabase && currentUser?.id && accounts.length > 0) {
         // Create transaction in database
         const primaryAccount = accounts.find(acc => acc.account_type === 'checking') || accounts[0];
-        
+
+        // Find category ID from category name
+        const selectedCategory = categories.find(cat => cat.name === quickActionData.category);
+
         const transactionData = {
           user_id: currentUser.id,
           account_id: primaryAccount.id,
-          category: quickActionData.category,
+          category_id: selectedCategory?.id,
           transaction_type: quickActionType,
           amount: quickActionType === 'income' ? amount : -amount,
           description: quickActionData.description,
@@ -279,16 +283,6 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser }) => {
     }
   ];
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  const [categories, setCategories] = useState<any[]>([]);
-
   const loadCategoriesAndShowModal = async () => {
     try {
       const categoriesData = dbHelpers.getTransactionCategories();
@@ -299,6 +293,14 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser }) => {
       setShowQuickAction(true);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

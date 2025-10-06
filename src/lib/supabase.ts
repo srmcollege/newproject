@@ -158,6 +158,17 @@ export const authHelpers = {
       const checkingAccount = accounts.find(acc => acc.account_name.includes('Checking'));
       if (!checkingAccount) return;
 
+      const { data: categories } = await supabase
+        .from('transaction_categories')
+        .select('id, name, type');
+
+      if (!categories) return;
+
+      const getCategoryId = (name: string) => {
+        const category = categories.find(cat => cat.name === name);
+        return category?.id || categories[0]?.id;
+      };
+
       const sampleTransactions = [
         {
           user_id: userId,
@@ -165,7 +176,7 @@ export const authHelpers = {
           transaction_type: 'income',
           amount: 207500,
           description: 'Monthly Salary Deposit',
-          category: 'Salary',
+          category_id: getCategoryId('Salary'),
           reference_number: `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           transaction_date: new Date().toISOString().split('T')[0],
           status: 'completed'
@@ -176,7 +187,7 @@ export const authHelpers = {
           transaction_type: 'expense',
           amount: -3765,
           description: 'Swiggy Food Order',
-          category: 'Food & Dining',
+          category_id: getCategoryId('Food & Dining'),
           reference_number: `TXN_${Date.now() + 1}_${Math.random().toString(36).substr(2, 9)}`,
           transaction_date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
           status: 'completed'
@@ -187,7 +198,7 @@ export const authHelpers = {
           transaction_type: 'expense',
           amount: -9960,
           description: 'BSES Electricity Bill',
-          category: 'Utilities',
+          category_id: getCategoryId('Utilities'),
           reference_number: `TXN_${Date.now() + 2}_${Math.random().toString(36).substr(2, 9)}`,
           transaction_date: new Date(Date.now() - 172800000).toISOString().split('T')[0],
           status: 'completed'
@@ -228,20 +239,28 @@ export const dbHelpers = {
 
   async getUserTransactions(userId: string, limit = 50) {
     if (!supabase) return [];
-    
+
     try {
       const { data, error } = await supabase
         .from('transactions')
         .select(`
           *,
-          accounts!transactions_account_id_fkey(account_name)
+          accounts!transactions_account_id_fkey(account_name),
+          transaction_categories(name)
         `)
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(limit);
 
       if (error) throw error;
-      return data || [];
+
+      // Transform data to match expected format
+      const transformedData = data?.map(transaction => ({
+        ...transaction,
+        category: transaction.transaction_categories?.name || 'Uncategorized'
+      })) || [];
+
+      return transformedData;
     } catch (error) {
       console.error('Get user transactions error:', error);
       return [];
