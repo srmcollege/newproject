@@ -317,5 +317,104 @@ export const dbHelpers = {
       { id: '5', name: 'Transportation', type: 'expense', icon: '🚗' },
       { id: '6', name: 'Investment', type: 'income', icon: '📈' }
     ];
+  },
+
+  async getRecentRecipients(userId: string, limit = 10) {
+    if (!supabase) return [];
+
+    try {
+      const { data, error } = await supabase
+        .from('recent_recipients')
+        .select('*')
+        .eq('user_id', userId)
+        .order('last_transfer_date', { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Get recent recipients error:', error);
+      return [];
+    }
+  },
+
+  async getRecentTransfers(userId: string, limit = 10) {
+    if (!supabase) return [];
+
+    try {
+      const { data, error } = await supabase
+        .from('recent_transfers')
+        .select('*')
+        .eq('user_id', userId)
+        .order('transfer_date', { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Get recent transfers error:', error);
+      return [];
+    }
+  },
+
+  async addRecentRecipient(userId: string, recipientName: string, recipientIdentifier: string, amount: number) {
+    if (!supabase) return;
+
+    try {
+      // Try to update existing recipient
+      const { data: existing } = await supabase
+        .from('recent_recipients')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('recipient_identifier', recipientIdentifier)
+        .maybeSingle();
+
+      if (existing) {
+        // Update existing recipient
+        await supabase
+          .from('recent_recipients')
+          .update({
+            last_transfer_date: new Date().toISOString(),
+            total_amount_sent: parseFloat(existing.total_amount_sent) + amount,
+            transfer_count: existing.transfer_count + 1,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existing.id);
+      } else {
+        // Insert new recipient
+        await supabase
+          .from('recent_recipients')
+          .insert({
+            user_id: userId,
+            recipient_name: recipientName,
+            recipient_identifier: recipientIdentifier,
+            total_amount_sent: amount,
+            transfer_count: 1
+          });
+      }
+    } catch (error) {
+      console.error('Add recent recipient error:', error);
+    }
+  },
+
+  async addRecentTransfer(userId: string, transactionId: string, transferData: any) {
+    if (!supabase) return;
+
+    try {
+      await supabase
+        .from('recent_transfers')
+        .insert({
+          user_id: userId,
+          transaction_id: transactionId,
+          transfer_type: transferData.type,
+          from_account_name: transferData.fromAccount,
+          to_account_name: transferData.toAccount,
+          recipient_name: transferData.recipient,
+          amount: transferData.amount,
+          transfer_date: new Date().toISOString().split('T')[0]
+        });
+    } catch (error) {
+      console.error('Add recent transfer error:', error);
+    }
   }
 };

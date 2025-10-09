@@ -26,10 +26,13 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
   const [transferCategoryId, setTransferCategoryId] = useState<string | null>(null);
+  const [recentRecipients, setRecentRecipients] = useState<any[]>([]);
+  const [recentTransfers, setRecentTransfers] = useState<any[]>([]);
 
   React.useEffect(() => {
     loadAccounts();
     loadTransferCategory();
+    loadRecentData();
   }, [currentUser]);
 
   const loadTransferCategory = async () => {
@@ -50,10 +53,25 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
     }
   };
 
+  const loadRecentData = async () => {
+    if (!supabase || !currentUser?.id) return;
+
+    try {
+      const [recipients, transfers] = await Promise.all([
+        dbHelpers.getRecentRecipients(currentUser.id, 5),
+        dbHelpers.getRecentTransfers(currentUser.id, 5)
+      ]);
+
+      setRecentRecipients(recipients);
+      setRecentTransfers(transfers);
+    } catch (err) {
+      console.error('Error loading recent data:', err);
+    }
+  };
+
   const loadAccounts = async () => {
     try {
       if (!supabase || !currentUser?.id) {
-        // Demo accounts for non-authenticated users
         const demoAccounts = [
           {
             id: '1',
@@ -80,7 +98,6 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
         return;
       }
 
-      // Load accounts from database
       const accountsData = await dbHelpers.getUserAccounts(currentUser.id);
       setAccounts(accountsData);
       if (accountsData.length > 0) {
@@ -89,23 +106,11 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
           setToAccount(accountsData[1].account_name);
         }
       }
-      
+
     } catch (err) {
       console.error('Error loading accounts:', err);
     }
   };
-
-  const recentRecipients = [
-    { name: 'Priya Sharma', email: 'priya.sharma@email.com', avatar: 'PS' },
-    { name: 'Amit Kumar', email: 'amit.kumar@email.com', avatar: 'AK' },
-    { name: 'Sneha Patel', email: 'sneha.patel@email.com', avatar: 'SP' },
-  ];
-
-  const recentTransfers = [
-    { id: 1, type: 'internal', from: 'Checking Account', to: 'Savings Account', amount: 83000, date: '2024-01-14' },
-    { id: 2, type: 'external', to: 'Priya Sharma', amount: 20750, date: '2024-01-13' },
-    { id: 3, type: 'internal', from: 'Investment Account', to: 'Checking Account', amount: 41500, date: '2024-01-12' },
-  ];
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -118,14 +123,14 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
 
   const handleTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     setLoading(true);
     setError('');
     setSuccess('');
 
     try {
       const transferAmount = parseFloat(amount);
-      
+
       if (!transferAmount || transferAmount <= 0) {
         throw new Error('Please enter a valid amount');
       }
@@ -143,8 +148,7 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
         if (supabase && currentUser?.id) {
           const toAccountData = accounts.find(acc => acc.account_name === toAccount);
 
-          // Create transfer transaction
-          await dbHelpers.createTransaction({
+          const newTransaction = await dbHelpers.createTransaction({
               user_id: currentUser.id,
               account_id: fromAccountData.id,
               to_account_id: toAccountData?.id,
@@ -156,25 +160,29 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
               transaction_date: new Date().toISOString().split('T')[0]
             });
 
-          // Update account balances
           await dbHelpers.updateAccountBalance(fromAccountData.id, fromAccountData.balance - transferAmount);
 
           if (toAccountData) {
             await dbHelpers.updateAccountBalance(toAccountData.id, toAccountData.balance + transferAmount);
           }
+
+          await dbHelpers.addRecentTransfer(currentUser.id, newTransaction.id, {
+            type: 'internal',
+            fromAccount: fromAccount,
+            toAccount: toAccount,
+            amount: transferAmount
+          });
         }
 
         setSuccess(`Successfully transferred ${formatCurrency(transferAmount)} from ${fromAccount} to ${toAccount}`);
-        
-        // Reset form
+
         setAmount('');
         setMemo('');
-        
-        // Reload accounts
+
         await loadAccounts();
+        await loadRecentData();
 
       } else {
-        // External transfer
         if (!recipient) {
           throw new Error('Please enter recipient details');
         }
@@ -185,8 +193,7 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
         }
 
         if (supabase && currentUser?.id) {
-          // Create expense transaction for external transfer
-          await dbHelpers.createTransaction({
+          const newTransaction = await dbHelpers.createTransaction({
             user_id: currentUser.id,
             account_id: fromAccountData.id,
             transaction_type: 'expense',
@@ -197,19 +204,26 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
             transaction_date: new Date().toISOString().split('T')[0]
           });
 
-          // Update account balance
           await dbHelpers.updateAccountBalance(fromAccountData.id, fromAccountData.balance - transferAmount);
+
+          await dbHelpers.addRecentRecipient(currentUser.id, recipient, recipient, transferAmount);
+
+          await dbHelpers.addRecentTransfer(currentUser.id, newTransaction.id, {
+            type: 'external',
+            fromAccount: fromAccount,
+            recipient: recipient,
+            amount: transferAmount
+          });
         }
 
         setSuccess(`Successfully sent ${formatCurrency(transferAmount)} to ${recipient}`);
-        
-        // Reset form
+
         setAmount('');
         setRecipient('');
         setMemo('');
-        
-        // Reload accounts
+
         await loadAccounts();
+        await loadRecentData();
       }
 
     } catch (err) {
@@ -217,6 +231,10 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
     }
 
     setLoading(false);
+  };
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
 
   return (
@@ -227,15 +245,14 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Transfer Form */}
         <div className="lg:col-span-2 bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <div className="mb-6">
             <div className="flex space-x-4">
               <button
                 onClick={() => setTransferType('internal')}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  transferType === 'internal' 
-                    ? 'bg-blue-100 text-blue-700 border-2 border-blue-300' 
+                  transferType === 'internal'
+                    ? 'bg-blue-100 text-blue-700 border-2 border-blue-300'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
@@ -244,8 +261,8 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
               <button
                 onClick={() => setTransferType('external')}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  transferType === 'external' 
-                    ? 'bg-blue-100 text-blue-700 border-2 border-blue-300' 
+                  transferType === 'external'
+                    ? 'bg-blue-100 text-blue-700 border-2 border-blue-300'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
@@ -254,20 +271,19 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
             </div>
           </div>
 
-          {/* Success/Error Messages */}
           {success && (
             <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
               <p className="text-green-700 text-sm">{success}</p>
             </div>
           )}
-          
+
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-red-700 text-sm">{error}</p>
             </div>
           )}
+
           <form onSubmit={handleTransfer} className="space-y-6">
-            {/* From Account */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">From Account</label>
               <select
@@ -283,7 +299,6 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
               </select>
             </div>
 
-            {/* To Account/Recipient */}
             <div>
               {transferType === 'internal' ? (
                 <>
@@ -314,7 +329,6 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
               )}
             </div>
 
-            {/* Amount */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Amount</label>
               <div className="relative">
@@ -330,7 +344,6 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
               </div>
             </div>
 
-            {/* Memo */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Memo (Optional)</label>
               <input
@@ -342,7 +355,6 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
               />
             </div>
 
-            {/* Transfer Button */}
             <button
               type="submit"
               disabled={loading}
@@ -360,25 +372,23 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
           </form>
         </div>
 
-        {/* Sidebar */}
         <div className="space-y-6">
-          {/* Recent Recipients */}
-          {transferType === 'external' && (
+          {transferType === 'external' && recentRecipients.length > 0 && (
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Recipients</h3>
               <div className="space-y-3">
-                {recentRecipients.map((recipient, index) => (
+                {recentRecipients.map((recipientData, index) => (
                   <button
                     key={index}
-                    onClick={() => setRecipient(recipient.email)}
+                    onClick={() => setRecipient(recipientData.recipient_identifier)}
                     className="w-full flex items-center space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-colors text-left"
                   >
                     <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-semibold">
-                      {recipient.avatar}
+                      {getInitials(recipientData.recipient_name)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 truncate">{recipient.name}</p>
-                      <p className="text-sm text-gray-500 truncate">{recipient.email}</p>
+                      <p className="font-medium text-gray-900 truncate">{recipientData.recipient_name}</p>
+                      <p className="text-sm text-gray-500 truncate">{recipientData.recipient_identifier}</p>
                     </div>
                   </button>
                 ))}
@@ -386,31 +396,32 @@ const Transfer: React.FC<TransferProps> = ({ currentUser }) => {
             </div>
           )}
 
-          {/* Recent Transfers */}
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Transfers</h3>
-            <div className="space-y-4">
-              {recentTransfers.map((transfer) => (
-                <div key={transfer.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-blue-100 text-blue-600 rounded-full">
-                      {transfer.type === 'internal' ? <ArrowRight className="w-4 h-4" /> : <User className="w-4 h-4" />}
+          {recentTransfers.length > 0 && (
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Transfers</h3>
+              <div className="space-y-4">
+                {recentTransfers.map((transfer) => (
+                  <div key={transfer.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-blue-100 text-blue-600 rounded-full">
+                        {transfer.transfer_type === 'internal' ? <ArrowRight className="w-4 h-4" /> : <User className="w-4 h-4" />}
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900 text-sm">
+                          {transfer.transfer_type === 'internal'
+                            ? `${transfer.from_account_name} → ${transfer.to_account_name}`
+                            : `To ${transfer.recipient_name}`
+                          }
+                        </p>
+                        <p className="text-xs text-gray-500">{transfer.transfer_date}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium text-gray-900 text-sm">
-                        {transfer.type === 'internal' 
-                          ? `${transfer.from} → ${transfer.to}`
-                          : `To ${transfer.to}`
-                        }
-                      </p>
-                      <p className="text-xs text-gray-500">{transfer.date}</p>
-                    </div>
+                    <span className="font-semibold text-gray-900">{formatCurrency(parseFloat(transfer.amount))}</span>
                   </div>
-                  <span className="font-semibold text-gray-900">{formatCurrency(transfer.amount)}</span>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
